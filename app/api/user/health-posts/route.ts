@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import dbConnect from "@/lib/mongodb"
-import Post from "@/lib/models/Post"
+import post from "@/lib/models/post"
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     await dbConnect()
 
-    const posts = await Post.find({ isApproved: true })
+    const posts = await post.find({ isApproved: true })
       .populate("authorId", "name")
       .populate("mentionedId", "name")
       .sort({ createdAt: -1 })

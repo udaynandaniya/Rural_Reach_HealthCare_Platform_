@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import dbConnect from "@/lib/mongodb"
-import Assessment from "@/lib/models/assessment"
 import jwt from "jsonwebtoken"
+import assessment from "@/lib/models/Assessment"
+
 
 // Helper function to get user from JWT token
 function getUserFromToken(request: NextRequest) {
