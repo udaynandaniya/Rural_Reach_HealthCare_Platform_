@@ -1,7 +1,9 @@
+///C:\Users\UDAYN\Downloads\healthcare-platform\lib\mongodb.ts
+
 import mongoose from "mongoose"
 
 mongoose.connection.on("connected", () => {
-  console.log("MongoDB connected to", mongoose.connection.name)
+  //console.log("MongoDB connected to", mongoose.connection.name)
 })
 
 mongoose.connection.on("error", (err) => {

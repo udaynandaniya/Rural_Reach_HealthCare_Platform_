@@ -7,7 +7,7 @@ import Doctor from "@/lib/models/Doctor"
 import Hospital from "@/lib/models/Hospital"
 
 export async function GET(request: NextRequest) {
-  console.log("i am at me JWT_SECRET at runtime:", process.env.JWT_SECRET)
+  // console.log("i am at me JWT_SECRET at runtime:", process.env.JWT_SECRET)
 
 
   try {
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
     await dbConnect()
-  console.log(" \n Decoded token:", decoded)
+  // console.log(" \n Decoded token:", decoded)
      
     // Find user based on role
     let user

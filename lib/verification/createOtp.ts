@@ -24,16 +24,16 @@ import OTP from "../models/OTP"
 export async function createOtp(email: string, role: string) {
   await dbConnect()
 
-  console.log("🔄 Creating OTP for:", { email, role })
+  //console.log("🔄 Creating OTP for:", { email, role })
 
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString()
 
-  console.log("🔢 Generated OTP:", otp)
+  //console.log("🔢 Generated OTP:", otp)
 
   // Delete any existing OTP for this email
   const deleteResult = await OTP.deleteMany({ email })
-  console.log("🗑️ Deleted existing OTPs:", deleteResult.deletedCount)
+  //console.log("🗑️ Deleted existing OTPs:", deleteResult.deletedCount)
 
   // Create new OTP with expiration (5 minutes from now)
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
@@ -45,13 +45,13 @@ export async function createOtp(email: string, role: string) {
     expiresAt,
   })
 
-  console.log("✅ Created new OTP record:", {
-    id: newOtpRecord._id,
-    email: newOtpRecord.email,
-    otp: newOtpRecord.otp,
-    role: newOtpRecord.role,
-    expiresAt: newOtpRecord.expiresAt,
-  })
+  // //console.log("✅ Created new OTP record:", {
+  //   id: newOtpRecord._id,
+  //   email: newOtpRecord.email,
+  //   otp: newOtpRecord.otp,
+  //   role: newOtpRecord.role,
+  //   expiresAt: newOtpRecord.expiresAt,
+  // })
 
   return otp
 }

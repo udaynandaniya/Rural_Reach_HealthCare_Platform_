@@ -4,15 +4,18 @@ import jwt from "jsonwebtoken"
 import dbConnect from "@/lib/mongodb"
 import Hospital from "@/lib/models/Hospital"
 import BlockedList from "@/lib/models/BlockedList"
+import AllUserContact from "@/lib/models/AllUserContact."
+
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect()
     const hospitalData = await request.json()
+    const { email, password, name, phone, isHandleEmergency, address } = hospitalData
 
-    // Check if hospital is blocked
+    // Check blocklist
     const blockedUser = await BlockedList.findOne({
-      $or: [{ email: hospitalData.email }, { phone: hospitalData.phone }],
+      $or: [{ email }, { phone }],
     })
 
     if (blockedUser) {
@@ -21,59 +24,101 @@ export async function POST(request: NextRequest) {
           success: false,
           message: "Access denied. Please contact admin if this is a mistake.",
         },
-        { status: 403 },
+        { status: 403 }
+      )
+    }
+
+    // Check contact uniqueness
+    const existingContact = await AllUserContact.findOne({
+      $or: [{ email }, { phone }],
+    })
+
+    if (existingContact) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email or phone already registered.",
+        },
+        { status: 409 }
       )
     }
 
     // Check if hospital already exists
     let existingHospital = await Hospital.findOne({
-      $or: [{ email: hospitalData.email }, { phone: hospitalData.phone }],
+      $or: [{ email }, { phone }],
     })
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(hospitalData.password, 12)
+    const hashedPassword = await bcrypt.hash(password, 12)
+
+    const addressToSave = {
+      street: address.street,
+      area: address.area,
+      village: address.village,
+      subDistrict: address.subDistrict,
+      district: address.district,
+    }
+
+    let isNowVerified = false
 
     if (existingHospital && !existingHospital.isVerified) {
-      // Update existing unverified hospital
-      existingHospital.name = hospitalData.name
-      existingHospital.phone = hospitalData.phone
+      // Update unverified hospital
+      existingHospital.name = name
+      existingHospital.phone = phone
       existingHospital.password = hashedPassword
-      existingHospital.isHandleEmergency = hospitalData.isHandleEmergency
-      existingHospital.address = hospitalData.address
+      existingHospital.isHandleEmergency = isHandleEmergency
+      existingHospital.address = addressToSave
       existingHospital.isVerified = true
       await existingHospital.save()
-
       existingHospital = existingHospital.toObject()
+      isNowVerified = true
     } else if (existingHospital && existingHospital.isVerified) {
       return NextResponse.json(
         {
           success: false,
-          message: "Hospital already exists with this email or phone",
+          message: "Hospital already exists with this email or phone.",
         },
-        { status: 400 },
+        { status: 400 }
       )
     } else {
       // Create new hospital
       existingHospital = await Hospital.create({
-        ...hospitalData,
+        name,
+        email,
+        phone,
         password: hashedPassword,
+        isHandleEmergency,
+        address: addressToSave,
         isVerified: true,
       })
+      isNowVerified = true
     }
 
-    // Generate JWT token
+    // ✅ Only save to AllUserContact if verified
+    if (isNowVerified) {
+      try {
+        await AllUserContact.create({
+          email,
+          phone,
+          role: "hospital",
+        })
+      } catch (contactError) {
+        console.warn("Warning: Could not create AllUserContact entry.", contactError)
+      }
+    }
+
+    // JWT token
     const token = jwt.sign(
       {
         userId: existingHospital._id,
         email: existingHospital.email,
         role: "hospital",
+        name: existingHospital.name,
         isAdmin: false,
       },
       process.env.JWT_SECRET!,
-      { expiresIn: "30d" },
+      { expiresIn: "30d" }
     )
 
-    // Create response
     const response = NextResponse.json({
       success: true,
       message: "Hospital account created successfully",
@@ -86,12 +131,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Set HTTP-only cookie
+    // Set auth cookie
     response.cookies.set("auth-token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     })
 
     return response
@@ -102,7 +147,7 @@ export async function POST(request: NextRequest) {
         success: false,
         message: "Internal server error",
       },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }

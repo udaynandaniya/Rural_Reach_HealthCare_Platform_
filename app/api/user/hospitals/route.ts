@@ -14,7 +14,7 @@ export const GET = async () => {
 
     return new NextResponse(JSON.stringify(hospitals), { status: 200 })
   } catch (err) {
-    console.log(err)
+    //console.log(err)
     return new NextResponse("Error in fetching hospitals - " + err, { status: 500 })
   }
 }

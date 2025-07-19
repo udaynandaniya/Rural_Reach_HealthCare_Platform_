@@ -1,8 +1,10 @@
+//C:\Users\UDAYN\Downloads\healthcare-platform\components\SessionStatus.tsx
+
 "use client"
 
 import { useEffect, useState } from "react"
 import { Clock, Shield } from "lucide-react"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/app/contexts/AuthProvider"
 
 export default function SessionStatus() {
   const { isAuthenticated, user } = useAuth()

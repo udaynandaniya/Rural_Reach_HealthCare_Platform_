@@ -1,3 +1,4 @@
+//C:\Users\UDAYN\Downloads\healthcare-platform\app\api\posts\doctor\route.ts
 import { type NextRequest, NextResponse } from "next/server"
 import dbConnect from "@/lib/mongodb"
 import post from "@/lib/models/post"
@@ -5,7 +6,7 @@ import post from "@/lib/models/post"
 export async function GET(request: NextRequest) {
   try {
     await dbConnect()
-    console.log("📦 Fetching all doctor posts")
+    //console.log("📦 Fetching all doctor posts")
 
     const posts = await post
       .find({ authorType: "Doctor" })

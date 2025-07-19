@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
     await dbConnect()
 
-    console.log("🔍 Fetching user profile for userId:", decoded.userId)
+    ////console.log("🔍 Fetching user profile for userId:", decoded.userId)
 
     // Get complete user data from database
     const user = await User.findById(decoded.userId).select("-password")
@@ -22,12 +22,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
-    console.log("✅ User profile found:", {
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      address: user.address,
-    })
+    // ////console.log("✅ User profile found:", {
+    //   name: user.name,
+    //   email: user.email,
+    //   phone: user.phone,
+    //   address: user.address,
+    // })
 
     return NextResponse.json({
       success: true,

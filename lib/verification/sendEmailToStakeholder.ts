@@ -1,3 +1,5 @@
+//C:\Users\UDAYN\Downloads\healthcare-platform\lib\verification\sendEmailToStakeholder.ts
+
 import nodemailer from "nodemailer"
 
 const transporter = nodemailer.createTransport({

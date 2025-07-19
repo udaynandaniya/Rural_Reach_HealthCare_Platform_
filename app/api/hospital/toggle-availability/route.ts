@@ -126,48 +126,48 @@ import Hospital from "@/lib/models/Hospital"
 import { jwtVerify } from "jose"
 
 export async function POST(req: NextRequest) {
-  console.log("🔧 [API] /hospital/toggle-availability POST called")
+  //console.log("🔧 [API] /hospital/toggle-availability POST called")
 
   try {
-    console.log("🌐 Connecting to DB...")
+    //console.log("🌐 Connecting to DB...")
     await dbConnect()
-    console.log("✅ DB connected")
+    //console.log("✅ DB connected")
 
     // Step 1: Get JWT from cookies
     const token = req.cookies.get("auth-token")?.value
-    console.log("🔐 Token fetched from cookies:", token ? "[Present]" : "[Missing]")
+    //console.log("🔐 Token fetched from cookies:", token ? "[Present]" : "[Missing]")
 
     if (!token) {
-      console.log("⛔ No auth-token found in cookies")
+      //console.log("⛔ No auth-token found in cookies")
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
     // Step 2: Verify JWT and extract payload
     const secret = new TextEncoder().encode(process.env.JWT_SECRET)
     const { payload } = await jwtVerify(token, secret)
-    console.log("🧾 Token verified. Payload:", payload)
+    //console.log("🧾 Token verified. Payload:", payload)
 
     if (payload.role !== "hospital" && !payload.isAdmin) {
-      console.log("🚫 User is not a hospital or admin")
+      //console.log("🚫 User is not a hospital or admin")
       return NextResponse.json({ message: "Forbidden" }, { status: 403 })
     }
 
     // Step 3: Find the hospital by email
     const hospital = await Hospital.findOne({ email: payload.email })
     if (!hospital) {
-      console.log("❌ Hospital not found for email:", payload.email)
+      //console.log("❌ Hospital not found for email:", payload.email)
       return NextResponse.json({ message: "Hospital not found" }, { status: 404 })
     }
-    console.log("🏥 Hospital found:", hospital.name)
+    //console.log("🏥 Hospital found:", hospital.name)
 
     // Step 4: Toggle availability
     const { isAvailable } = await req.json()
-    console.log("🔄 Requested availability toggle to:", isAvailable)
+    //console.log("🔄 Requested availability toggle to:", isAvailable)
 
     hospital.isAvailable = isAvailable
     await hospital.save()
 
-    console.log("✅ Availability updated in DB:", isAvailable)
+    //console.log("✅ Availability updated in DB:", isAvailable)
 
     return NextResponse.json({ message: "Availability updated", isAvailable }, { status: 200 })
   } catch (error) {

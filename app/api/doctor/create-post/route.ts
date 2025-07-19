@@ -1,49 +1,62 @@
-import { type NextRequest, NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
-import dbConnect from "@/lib/mongodb"
+// app/api/doctor/create-post/route.ts
+import { NextResponse } from "next/server"
 import post from "@/lib/models/post"
+import { getSession } from "@/lib/getSession"
 
-export async function POST(request: NextRequest) {
+
+export async function POST(req: Request) {
   try {
-    console.log("📥 Incoming request to create doctor post")
+    const session = await getSession(req)
 
-    const token = request.cookies.get("auth-token")?.value
-    console.log("🔐 Extracted token:", token ? "✅ Present" : "❌ Missing")
-
-    if (!token) {
+    if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
-    console.log("👨‍⚕️ Decoded JWT:", decoded)
-
-    if (decoded.role !== "doctor") {
-      return NextResponse.json({ success: false, message: "Doctor access required" }, { status: 403 })
+    if (session.role !== "doctor") {
+      return NextResponse.json({ success: false, message: "Forbidden: Not a doctor" }, { status: 403 })
     }
 
-    const { title, content, category, tags } = await request.json()
-    console.log("📝 Post data received:", { title, content, category, tags })
+    const body = await req.json()
+    const { title, content, category, tags } = body
 
-    await dbConnect()
-    console.log("✅ Connected to MongoDB")
+    if (!title || !content || !category || !tags) {
+      return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
+    }
+
+
+
+
+
+
+console.log("\n\\n\n\n📦 Session used in post creation:", session)
+
+
+
+
+
+
+
+
+
+
 
     const newPost = await post.create({
       title,
       content,
       category,
       tags,
-      authorId: decoded.userId,
+      postby: session.name,
+      email: session.email,
       authorType: "Doctor",
       mentionedId: null,
       mentionedType: null,
-      isApproved: true, // ✅ You said no admin approval required
+      isApproved: true,
     })
 
-    console.log("✅ Doctor post created:", newPost._id)
+    return NextResponse.json({ success: true, data: newPost }, { status: 201 })
 
-    return NextResponse.json({ success: true, data: newPost })
   } catch (error) {
-    console.error("💥 Error creating doctor post:", error)
+    console.error("🔥 [CREATE_POST_ERROR]:", error)
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 })
   }
 }

@@ -2,7 +2,7 @@
 
 // import ThemeToggle from "@/components/ThemeToggle"
 // import LogoutButton from "@/components/LogoutButton"
-// import { useAuth } from "@/hooks/useAuth"
+// import { useAuth } from "@/app/contexts/AuthProvider"
 // import SessionStatus from "@/components/SessionStatus"
 
 // export default function AdminDashboard() {
@@ -67,7 +67,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/app/contexts/AuthProvider"
 import ThemeToggle from "@/components/ThemeToggle"
 import UserDropdown from "@/components/UserDropdown"
 import { toast } from "react-hot-toast"
