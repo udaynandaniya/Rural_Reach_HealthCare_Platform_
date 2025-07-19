@@ -9,7 +9,7 @@ import { cookies } from "next/headers"
 export async function GET(request: NextRequest) {
   try {
     await dbConnect()
-    console.log("📦 Fetching all posts with role-aware filtering")
+    // console.log("📦 Fetching all posts with role-aware filtering")
 
     const cookieStore = await cookies()
     const token = cookieStore.get("auth-token")?.value

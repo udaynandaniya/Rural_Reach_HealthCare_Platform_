@@ -26,7 +26,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       })
       if (res.ok) {
         setUser(null)
+        if (typeof window !== "undefined") {
         window.location.href = "/auth/login"
+      }
+
       } else {
         toast.error("Logout failed.")
       }

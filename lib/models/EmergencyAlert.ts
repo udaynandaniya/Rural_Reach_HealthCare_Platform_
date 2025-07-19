@@ -532,7 +532,7 @@
 
 
 
-
+// lib/models/EmergencyAlert.ts
 
 import mongoose, { Schema, type Document } from "mongoose"
 

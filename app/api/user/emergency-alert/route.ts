@@ -521,26 +521,22 @@ export async function POST(request: NextRequest) {
       "location.lng": { $exists: true, $ne: null }, // Ensure lng exists and is not null
     })
 
-    console.log(`[EmergencyAlert] Found ${allEligibleHospitals.length} eligible hospitals in DB.`)
+    // console.log(`[EmergencyAlert] Found ${allEligibleHospitals.length} eligible hospitals in DB.`)
 
     const hospitalsWithDistance = allEligibleHospitals
       .map((hospital) => {
         const { lat, lng } = hospital.location
         const distance = calculateDistance(location.lat, location.lng, lat!, lng!)
-        console.log(
-          `[EmergencyAlert] Hospital: ${hospital.name} (ID: ${hospital._id}) at (${lat}, ${lng}) is ${distance.toFixed(2)}km from user.`,
-        )
+        // console.log(`[EmergencyAlert] Hospital: ${hospital.name} (ID: ${hospital._id}) at (${lat}, ${lng}) is ${distance.toFixed(2)}km from user.`,)
         return { hospitalId: hospital._id, lat, lng, distance, hospitalName: hospital.name }
       })
       .filter((h) => h.distance <= 100) // Filter within 100km
       .sort((a, b) => a.distance - b.distance) // Sort by distance
 
-    console.log(`[EmergencyAlert] After 100km filter, found ${hospitalsWithDistance.length} hospitals.`)
+    // console.log(`[EmergencyAlert] After 100km filter, found ${hospitalsWithDistance.length} hospitals.`)
 
     if (hospitalsWithDistance.length > 0) {
-      console.log(
-        `[EmergencyAlert] Nearest hospitals: ${hospitalsWithDistance.map((h) => `${h.hospitalName} (${h.distance.toFixed(2)}km)`).join(", ")}`,
-      )
+      // console.log(`[EmergencyAlert] Nearest hospitals: ${hospitalsWithDistance.map((h) => `${h.hospitalName} (${h.distance.toFixed(2)}km)`).join(", ")}`, )
     }
 
     if (hospitalsWithDistance.length === 0) {

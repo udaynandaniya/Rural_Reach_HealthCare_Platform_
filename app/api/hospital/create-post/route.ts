@@ -113,7 +113,7 @@ export async function POST(req: Request) {
 
 
 
-    console.log("\n\n🏥 Creating post for hospital session:", session)
+    // console.log("\n\n🏥 Creating post for hospital session:", session)
 
     
 
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    console.log("🏥 Creating post for hospital session:", session)
+    // console.log("🏥 Creating post for hospital session:", session)
 
     const newPost = await post.create({
       title,

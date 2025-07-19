@@ -80,7 +80,9 @@ export default function ForgotPasswordPage() {
       })
 
       setTimeout(() => {
-        window.location.href = "/auth/login"
+        if (typeof window !== "undefined") {
+          window.location.href = "/auth/login"
+        }
       }, 2000)
     } catch (error) {
       toast({ title: "Error", description: "Something went wrong", variant: "destructive" })
@@ -169,7 +171,9 @@ export default function ForgotPasswordPage() {
       })
 
       setTimeout(() => {
-        window.location.href = "/auth/login"
+        if (typeof window !== "undefined") {
+          window.location.href = "/auth/login"
+        }
       }, 2000)
     } catch (error) {
       toast({ title: "Error", description: "Password reset failed", variant: "destructive" })

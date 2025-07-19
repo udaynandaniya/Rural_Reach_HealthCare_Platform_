@@ -95,9 +95,9 @@ export async function DELETE(req: NextRequest) {
     const updatedAlert = await EmergencyAlert.findById(alertId)
     if (updatedAlert && updatedAlert.isSentTo.length === 0) {
       await EmergencyAlert.deleteOne({ _id: alertId })
-      console.log(`🗑️ Alert ${alertId} fully deleted as no hospitals are tracking it.`)
+      // console.log(`🗑️ Alert ${alertId} fully deleted as no hospitals are tracking it.`)
     } else {
-      console.log(`🗑️ Alert ${alertId} removed from hospital ${hospitalId}'s view.`)
+      // console.log(`🗑️ Alert ${alertId} removed from hospital ${hospitalId}'s view.`)
     }
 
     return NextResponse.json({ message: "Alert deleted successfully" }, { status: 200 })

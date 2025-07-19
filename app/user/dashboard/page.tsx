@@ -10591,6 +10591,7 @@ export default function UserDashboard() {
                       User: {currentAlert.userInfo?.name || userProfile?.name || "Unknown"} | Phone:{" "}
                       {currentAlert.userInfo?.phone || userProfile?.phone || "Unknown"}
                     </p>
+                    
                   )}
                 </div>
                 <Button variant="ghost" size="sm" onClick={dismissAlert} className="text-red-600 hover:text-red-800">

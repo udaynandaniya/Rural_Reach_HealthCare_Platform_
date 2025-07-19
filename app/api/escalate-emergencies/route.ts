@@ -241,14 +241,14 @@ export async function GET(request: NextRequest) {
     })
 
     if (alertsToEscalate.length === 0) {
-      console.log("No emergency alerts due for escalation.")
+      // console.log("No emergency alerts due for escalation.")
       return NextResponse.json({ success: true, message: "No alerts to escalate." })
     }
 
-    console.log(`Found ${alertsToEscalate.length} alert(s) to escalate.`)
+    // console.log(`Found ${alertsToEscalate.length} alert(s) to escalate.`)
 
     for (const alert of alertsToEscalate) {
-      console.log(`Processing alert ID: ${alert._id}`)
+      // console.log(`Processing alert ID: ${alert._id}`)
 
       // Get all eligible hospitals within 50km
       const allEligibleHospitals = await Hospital.find({
@@ -291,12 +291,10 @@ export async function GET(request: NextRequest) {
         const remainingUncontacted = uncontactedHospitals.slice(3)
         if (remainingUncontacted.length > 0) {
           alert.nextEscalationTime = new Date(now.getTime() + 3 * 60 * 1000) // Schedule 3 minutes later
-          console.log(
-            `Alert ${alert._id}: Sent to ${nextBatch.length} new hospitals. Next escalation scheduled for ${alert.nextEscalationTime}.`,
-          )
+          // console.log(`Alert ${alert._id}: Sent to ${nextBatch.length} new hospitals. Next escalation scheduled for ${alert.nextEscalationTime}.`,  )
         } else {
           alert.nextEscalationTime = null // No more hospitals to escalate to
-          console.log(`Alert ${alert._id}: All nearby hospitals contacted. No further escalation.`)
+          // console.log(`Alert ${alert._id}: All nearby hospitals contacted. No further escalation.`)
         }
       } else {
         // No more uncontacted hospitals within 50km
@@ -305,13 +303,11 @@ export async function GET(request: NextRequest) {
         // If the alert is still pending, mark it as "no_response_all_contacted"
         if (alert.status === "pending") {
           alert.status = "no_response_all_contacted"
-          console.log(
-            `01: Alert ${alert._id}: No hospital ready to accept emergency within 100km. Status updated to 'no_response_all_contacted'.`,
-          )
+          // console.log(`01: Alert ${alert._id}: No hospital ready to accept emergency within 100km. Status updated to 'no_response_all_contacted'.`,)
           // TODO: Implement user notification here (e.g., push notification, email, SMS)
           // The user's dashboard would need to poll for this status change and display a toast.
         } else {
-          console.log(`Alert ${alert._id}: No more uncontacted hospitals, but status is not pending.`)
+          // console.log(`Alert ${alert._id}: No more uncontacted hospitals, but status is not pending.`)
         }
       }
       await alert.save()

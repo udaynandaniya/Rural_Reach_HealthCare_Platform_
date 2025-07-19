@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
 
 
-console.log("\n\\n\n\n📦 Session used in post creation:", session)
+// console.log("\n\\n\n\n📦 Session used in post creation:", session)
 
 
 

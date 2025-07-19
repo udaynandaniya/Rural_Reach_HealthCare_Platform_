@@ -8919,10 +8919,10 @@ export default function HospitalDashboard() {
   // Effect to trigger fixed location geocoding after a delay if not already set
   useEffect(() => {
     if (hospital && !hospital.location?.lat && !hospital.location?.lng) {
-      console.log("Hospital fixed location not set. Initiating geocoding in 4 minutes...")
+      // console.log("Hospital fixed location not set. Initiating geocoding in 4 minutes...")
       // Using 5 seconds for demonstration. For production, use 4 * 60 * 1000 (4 minutes).
       const geocodeTimer = setTimeout(() => {
-        console.log("4 minutes passed. Attempting to geocode hospital address.")
+        // console.log("4 minutes passed. Attempting to geocode hospital address.")
         triggerFixedLocationGeocoding(hospital._id)
       }, 5 * 1000)
       return () => clearTimeout(geocodeTimer)
@@ -8963,8 +8963,8 @@ export default function HospitalDashboard() {
           if (result.data.location?.lat && result.data.location?.lng) {
             setFixedLocation(result.data.location)
           }
-          console.log("Hospital data:", result.data)
-          console.log("isHandleEmergency:", result.data.isHandleEmergency)
+          // console.log("Hospital data:", result.data)
+          // console.log("isHandleEmergency:", result.data.isHandleEmergency)
           return result.data // Return hospital data for initial tab setting
         }
       } else {
@@ -9060,7 +9060,7 @@ export default function HospitalDashboard() {
   if (!isHandleEmergency || !isAvailable) return
 
   try {
-    console.log("🔄 Fetching emergency alerts...")
+    // console.log("🔄 Fetching emergency alerts...")
     const response = await fetch("/api/hospital/emergency-alerts")
 
     if (!response.ok) {
@@ -9083,7 +9083,7 @@ export default function HospitalDashboard() {
       relevantAlerts.filter((alert: EmergencyAlert) => alert.hospitalAlertStatus === "pending").length || 0,
     )
     setLastChecked(new Date())
-    console.log(`✅ Found ${relevantAlerts.length || 0} nearby emergency alerts`)
+    // console.log(`✅ Found ${relevantAlerts.length || 0} nearby emergency alerts`)
 
     const criticalPendingAlerts = relevantAlerts.filter(
       (alert: EmergencyAlert) => alert.priority === "critical" && alert.hospitalAlertStatus === "pending",
@@ -9108,7 +9108,7 @@ export default function HospitalDashboard() {
     }
 
     try {
-      console.log("\n in /api/hospital/create-post Creating new post:", newPost)
+      // console.log("\n in /api/hospital/create-post Creating new post:", newPost)
       const response = await fetch("/api/hospital/create-post", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -9499,12 +9499,7 @@ export default function HospitalDashboard() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between relative z-10">
           <div className="flex items-center space-x-4">
 
-                     {/* <Link href="/" passHref>
-                          <Button variant="ghost" size="icon" className="text-gray-600 dark:text-gray-400">
-                            <Home className="w-6 h-6" />
-                            <span className="sr-only">Home</span>
-                          </Button>
-                        </Link> */}
+                    
 
                      <Link href="/" passHref>
   <Button

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       )
     }
     const fullAddress = `${address.village}, ${address.subDistrict}, ${address.district}, ${address.state}, India`
-    console.log(`Geocoding with Nominatim: ${fullAddress}`)
+    // console.log(`Geocoding with Nominatim: ${fullAddress}`)
     const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fullAddress)}&format=json&limit=1`
     const response = await fetch(geocodeUrl, {
       headers: {

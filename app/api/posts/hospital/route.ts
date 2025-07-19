@@ -11,7 +11,7 @@ import { getSession } from "@/lib/getSession"
 export async function GET(request: NextRequest) {
   try {
     await dbConnect()
-    console.log("📦 Fetching posts based on role")
+    // console.log("📦 Fetching posts based on role")
 
     const session = await getSession(request)
     const query: any = { isApproved: true }

@@ -1,3 +1,4 @@
+// lib/models/BlockedList.ts
 import mongoose from "mongoose"
 
 const blockedListSchema = new mongoose.Schema({

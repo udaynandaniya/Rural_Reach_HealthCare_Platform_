@@ -160,10 +160,21 @@ export default function DoctorManageProfile() {
 
         {/* Buttons */}
         <div className="flex gap-4 justify-end pt-4">
-          <Button variant="outline" onClick={() => window.location.reload()}>Cancel</Button>
-          <Button disabled={loading} onClick={handleUpdate}>
-            {loading ? <Loader2 className="animate-spin h-4 w-4" /> : "Update Profile"}
-          </Button>
+  <Button
+    variant="outline"
+    onClick={() => {
+      if (typeof window !== "undefined") {
+        window.location.reload()
+      }
+    }}
+  >
+    Cancel
+  </Button>
+  <Button disabled={loading} onClick={handleUpdate}>
+    {loading ? <Loader2 className="animate-spin h-4 w-4" /> : "Update Profile"}
+  </Button>
+</div>
+
         </div>
       </div>
     </>
