@@ -176,7 +176,7 @@ export default function DoctorManageProfile() {
 </div>
 
         </div>
-      </div>
+    
     </>
   )
 }
