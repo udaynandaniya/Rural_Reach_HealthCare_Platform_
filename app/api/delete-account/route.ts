@@ -10,7 +10,7 @@ import Announcement from "@/lib/models/Announcement"
 import BlockedList from "@/lib/models/BlockedList"
 import EmergencyAlert from "@/lib/models/EmergencyAlert"
 import post from "@/lib/models/post"
-import AllUserContact from "@/lib/models/AllUserContact."
+import AllUserContact from "@/lib/models/AllUserContact"
 
 export async function DELETE(req: NextRequest) {
   await dbConnect()

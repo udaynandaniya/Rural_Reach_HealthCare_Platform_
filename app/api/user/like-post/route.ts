@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import jwt from "jsonwebtoken"
 import dbConnect from "@/lib/mongodb"
-import Post from "@/lib/models/Post"
+import post from "@/lib/models/post"  
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,19 +15,19 @@ export async function POST(request: NextRequest) {
 
     await dbConnect()
 
-    const post = await Post.findById(postId)
-    if (!post) {
+    const Post = await post.findById(postId)
+    if (!Post) {
       return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 })
     }
 
-    const userLikedIndex = post.likes.indexOf(decoded.userId)
+    const userLikedIndex = Post.likes.indexOf(decoded.userId)
     if (userLikedIndex > -1) {
-      post.likes.splice(userLikedIndex, 1)
+      Post.likes.splice(userLikedIndex, 1)
     } else {
-      post.likes.push(decoded.userId)
+      Post.likes.push(decoded.userId)
     }
 
-    await post.save()
+    await Post.save()
 
     return NextResponse.json({ success: true, message: "Post like updated" })
   } catch (error) {

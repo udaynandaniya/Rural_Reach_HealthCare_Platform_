@@ -7,6 +7,7 @@ import Doctor from "@/lib/models/Doctor"
 import Hospital from "@/lib/models/Hospital"
 import BlockedList from "@/lib/models/BlockedList"
 import AllUserContact from "@/lib/models/AllUserContact"
+AllUserContact
 
 export async function POST(request: NextRequest) {
   try {

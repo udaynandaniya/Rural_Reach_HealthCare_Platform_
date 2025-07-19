@@ -130,7 +130,8 @@ import jwt from "jsonwebtoken"
 import dbConnect from "@/lib/mongodb"
 import User from "@/lib/models/User"
 import BlockedList from "@/lib/models/BlockedList"
-import AllUserContact from "@/lib/models/AllUserContact."
+import AllUserContact from "@/lib/models/AllUserContact"
+
 export async function POST(request: NextRequest) {
   try {
     await dbConnect()
