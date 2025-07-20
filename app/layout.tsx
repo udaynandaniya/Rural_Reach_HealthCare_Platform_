@@ -64,8 +64,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-     <body className={`${inter.className} overflow-x-hidden`}>
-
+      <body className={inter.className}>
         <ThemeProvider>
            <AuthProvider>
           {children}

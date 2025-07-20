@@ -1801,18 +1801,22 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.6 }}
         >
           {/* Main Headline */}
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center text-white leading-tight px-4">
-              A Platform where{' '}
-              <span className="inline-block max-w-full overflow-hidden whitespace-nowrap px-3 py-1 rounded-md text-white font-semibold bg-gradient-to-r from-yellow-400 to-orange-500">
+         <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-8">
+        <span className="text-gray-900 dark:text-white">A Platform where </span>
+            <span className="relative inline-block">
+              <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-lg transform -rotate-1 inline-block">
                 Healthcare
-              </span>{' '}
-              and{' '}
-              <span className="inline-block max-w-full overflow-hidden whitespace-nowrap px-3 py-1 rounded-md text-white font-semibold bg-gradient-to-r from-blue-500 to-purple-500">
+              </span>
+            </span>
+            <span className="text-gray-900 dark:text-white"> and </span>
+            <span className="relative inline-block">
+              <span className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg transform rotate-1 inline-block">
                 Emergency
-              </span>{' '}
-              Meet Together
-            </h1>
-
+              </span>
+            </span>
+            <br />
+            <span className="text-gray-900 dark:text-white">Meet Together</span>
+          </h1>
 
           {/* Subtitle */}
           <motion.p
@@ -2134,7 +2138,7 @@ export default function LandingPage() {
     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
       <Button
         onClick={() => router.push('/auth/register')}
-       className="text-sm sm:text-base px-6 py-3 w-full sm:w-auto"
+        className="text-sm sm:text-base px-6 py-3 w-full sm:w-auto"
       >
         Join Now
       </Button>
