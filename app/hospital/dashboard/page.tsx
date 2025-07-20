@@ -1863,15 +1863,6 @@
 // }
 
 
-
-
-
-
-
-
-
-
-
 "use client"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
@@ -1883,7 +1874,6 @@ import {
   MessageSquare,
   Bell,
   Send,
-  UserCheck,
   Tag,
   Calendar,
   Eye,
@@ -2036,6 +2026,7 @@ export default function HospitalDashboard() {
   const [lastChecked, setLastChecked] = useState<Date>(new Date())
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined) // State to control active tab
+  const [refreshing, setRefreshing] = useState(false) // New state for manual refresh
 
   // State for the fixed hospital location (from DB, geocoded from address)
   const [fixedLocation, setFixedLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -2075,7 +2066,6 @@ export default function HospitalDashboard() {
       setLoading(true)
       // Fetch hospital data first to determine emergency handling capability
       const hospitalData = await fetchHospitalData()
-
       if (hospitalData?.isHandleEmergency) {
         setActiveTab("emergencies") // Set default tab to emergencies if handling them
       } else {
@@ -2096,6 +2086,7 @@ export default function HospitalDashboard() {
           await fetchEmergencyAlerts() // Fetch alerts only if handling emergencies
         }, 3000) // 3 second delay
       }
+
       setLoading(false) // Set loading to false after all initial fetches are initiated
     }
 
@@ -2120,6 +2111,7 @@ export default function HospitalDashboard() {
         // console.log("4 minutes passed. Attempting to geocode hospital address.")
         triggerFixedLocationGeocoding(hospital._id)
       }, 5 * 1000)
+
       return () => clearTimeout(geocodeTimer)
     }
   }, [hospital]) // Re-run when hospital data changes
@@ -2131,6 +2123,7 @@ export default function HospitalDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hospitalId }),
       })
+
       const data = await response.json()
       if (response.ok && data.success) {
         // No toast message here, just update the UI
@@ -2184,6 +2177,7 @@ export default function HospitalDashboard() {
         const ownPostsData = await ownPostsRes.json()
         setOwnPosts(ownPostsData.data || [])
       }
+
       if (ownAnnouncementsRes.ok) {
         const ownAnnouncementsData = await ownAnnouncementsRes.json()
         setOwnAnnouncements(ownAnnouncementsData.data || [])
@@ -2208,12 +2202,10 @@ export default function HospitalDashboard() {
 
   // const fetchEmergencyAlerts = async () => {
   //   if (!isHandleEmergency) return
-
   //   try {
   //     console.log("🔄 Fetching emergency alerts...")
   //     const response = await fetch("/api/hospital/emergency-alerts")
   //     const data = await response.json()
-
   //     if (response.ok) {
   //       // Only show pending, read, or accepted alerts
   //       const relevantAlerts =
@@ -2229,7 +2221,6 @@ export default function HospitalDashboard() {
   //       )
   //       setLastChecked(new Date())
   //       console.log(`✅ Found ${relevantAlerts.length || 0} nearby emergency alerts`)
-
   //       if (relevantAlerts.length > 0) {
   //         const criticalPendingAlerts = relevantAlerts.filter(
   //           (alert: EmergencyAlert) => alert.priority === "critical" && alert.hospitalAlertStatus === "pending",
@@ -2248,53 +2239,63 @@ export default function HospitalDashboard() {
   //   }
   // }
 
-
-
-
   const fetchEmergencyAlerts = async () => {
-  if (!isHandleEmergency || !isAvailable) return
+    if (!isHandleEmergency || !isAvailable) return
+    try {
+      // console.log("🔄 Fetching emergency alerts...")
+      const response = await fetch("/api/hospital/emergency-alerts")
+      if (!response.ok) {
+        console.error("❌ Failed to fetch alerts:", response.status)
+        return
+      }
 
-  try {
-    // console.log("🔄 Fetching emergency alerts...")
-    const response = await fetch("/api/hospital/emergency-alerts")
+      const data = await response.json()
+      const relevantAlerts =
+        data.alerts?.filter(
+          (alert: EmergencyAlert) =>
+            alert.hospitalAlertStatus === "pending" ||
+            alert.hospitalAlertStatus === "read" ||
+            alert.status === "accepted",
+        ) || []
 
-    if (!response.ok) {
-      console.error("❌ Failed to fetch alerts:", response.status)
-      return
+      setEmergencyAlerts(relevantAlerts)
+      setNotifications(
+        relevantAlerts.filter((alert: EmergencyAlert) => alert.hospitalAlertStatus === "pending").length || 0,
+      )
+      setLastChecked(new Date())
+      // console.log(`✅ Found ${relevantAlerts.length || 0} nearby emergency alerts`)
+
+      const criticalPendingAlerts = relevantAlerts.filter(
+        (alert: EmergencyAlert) => alert.priority === "critical" && alert.hospitalAlertStatus === "pending",
+      )
+      if (criticalPendingAlerts.length > 0) {
+        toast.error(`🚨 ${criticalPendingAlerts.length} CRITICAL emergency alert(s) nearby!`, {
+          duration: 8000,
+        })
+      }
+    } catch (error) {
+      console.error("💥 Error fetching emergency alerts:", error)
     }
-
-    const data = await response.json()
-
-    const relevantAlerts =
-      data.alerts?.filter(
-        (alert: EmergencyAlert) =>
-          alert.hospitalAlertStatus === "pending" ||
-          alert.hospitalAlertStatus === "read" ||
-          alert.status === "accepted",
-      ) || []
-
-    setEmergencyAlerts(relevantAlerts)
-    setNotifications(
-      relevantAlerts.filter((alert: EmergencyAlert) => alert.hospitalAlertStatus === "pending").length || 0,
-    )
-    setLastChecked(new Date())
-    // console.log(`✅ Found ${relevantAlerts.length || 0} nearby emergency alerts`)
-
-    const criticalPendingAlerts = relevantAlerts.filter(
-      (alert: EmergencyAlert) => alert.priority === "critical" && alert.hospitalAlertStatus === "pending",
-    )
-
-    if (criticalPendingAlerts.length > 0) {
-      toast.error(`🚨 ${criticalPendingAlerts.length} CRITICAL emergency alert(s) nearby!`, {
-        duration: 8000,
-      })
-    }
-  } catch (error) {
-    console.error("💥 Error fetching emergency alerts:", error)
   }
-}
 
-
+  // New manual refresh function
+  const handleManualRefresh = async () => {
+    setRefreshing(true)
+    try {
+      // Refresh all data
+      await Promise.all([
+        fetchHospitalData(),
+        fetchOwnPostsAndAnnouncements(),
+        fetchAllOtherPosts(),
+        isHandleEmergency ? fetchEmergencyAlerts() : Promise.resolve(),
+      ])
+      toast.success("🔄 Dashboard refreshed successfully!")
+    } catch (error) {
+      toast.error("Failed to refresh dashboard")
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   const handleCreatePost = async () => {
     if (!newPost.title || !newPost.content || !newPost.category) {
@@ -2412,8 +2413,8 @@ export default function HospitalDashboard() {
 
   const handleResponse = async (action: "accept" | "deny") => {
     if (!selectedAlert) return
-    setResponding(true)
 
+    setResponding(true)
     try {
       const response = await fetch("/api/hospital/emergency-alerts/respond", {
         method: "POST",
@@ -2423,6 +2424,7 @@ export default function HospitalDashboard() {
           action,
         }),
       })
+
       const data = response.headers.get("content-type")?.includes("application/json")
         ? await response.json()
         : { message: response.statusText || "An unexpected error occurred." }
@@ -2473,6 +2475,7 @@ export default function HospitalDashboard() {
       toast.error("Please fill in all required fields for the announcement.")
       return
     }
+
     setIsSavingAnnouncement(true)
     try {
       const response = await fetch("/api/announcements/create", {
@@ -2583,43 +2586,38 @@ export default function HospitalDashboard() {
     return parts.join(", ")
   }
 
-
-
   const openGoogleMaps = (location: { lat?: number; lng?: number; address?: any }) => {
-  if (!location || (!location.lat && !location.lng && !location.address)) {
-    toast.error("⚠️ Location data not available for mapping.");
-    return;
-  }
-
-  let googleMapsUrl = "";
-
-  // Prefer GPS coordinates
-  if (location.lat && location.lng) {
-    googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`;
-    toast.success("📍 Opening location in Google Maps via GPS...");
-  } 
-  
-  // Fallback to formatted address
-  else if (location.address) {
-    const formattedAddress = formatLocationAddress(location.address);
-    if (formattedAddress && formattedAddress.trim() !== "") {
-      googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formattedAddress)}`;
-      toast.success("🏠 Opening location in Google Maps via address...");
-    } else {
-      toast.error("⚠️ Insufficient address details for mapping.");
-      return;
+    if (!location || (!location.lat && !location.lng && !location.address)) {
+      toast.error("⚠️ Location data not available for mapping.")
+      return
     }
-  } 
-  
-  // Safety fallback
-  else {
-    toast.error("⚠️ No valid location data to open in Google Maps.");
-    return;
+
+    let googleMapsUrl = ""
+
+    // Prefer GPS coordinates
+    if (location.lat && location.lng) {
+      googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`
+      toast.success("📍 Opening location in Google Maps via GPS...")
+    }
+    // Fallback to formatted address
+    else if (location.address) {
+      const formattedAddress = formatLocationAddress(location.address)
+      if (formattedAddress && formattedAddress.trim() !== "") {
+        googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formattedAddress)}`
+        toast.success("🏠 Opening location in Google Maps via address...")
+      } else {
+        toast.error("⚠️ Insufficient address details for mapping.")
+        return
+      }
+    }
+    // Safety fallback
+    else {
+      toast.error("⚠️ No valid location data to open in Google Maps.")
+      return
+    }
+
+    window.open(googleMapsUrl, "_blank")
   }
-
-  window.open(googleMapsUrl, "_blank");
-};
-
 
   const handleShareAlert = (alert: EmergencyAlert) => {
     const patientName = alert.userInfo.name
@@ -2661,1132 +2659,1079 @@ export default function HospitalDashboard() {
   const quickStatsGridCols = isHandleEmergency ? "grid-cols-1 md:grid-cols-5" : "grid-cols-1 md:grid-cols-4"
   const tabsListGridCols = isHandleEmergency ? "grid-cols-5" : "grid-cols-4"
 
-//
-
-
-return (
-  <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-    {/* Header with Animated Icons */}
-    <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 relative">
-      <AnimatedHealthIcons />
-      <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between relative z-10">
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <Link href="/" passHref>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-gray-600 dark:text-gray-400 p-2 sm:p-3 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition w-10 h-10 sm:w-14 sm:h-14"
-            >
-              <Home className="w-5 h-5 sm:w-7 sm:h-7" />
-              <span className="sr-only">Home</span>
-            </Button>
-          </Link>
-
-          <motion.div
-            className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg"
-            animate={{
-              scale: [1, 1.1, 1],
-              rotate: [0, 5, -5, 0],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-          >
-            <Building2 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
-          </motion.div>
-          <div className="hidden sm:block">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Hospital Dashboard</h1>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              {isHandleEmergency ? "Manage emergency care & health content" : "Manage health content"}
-            </p>
-          </div>
-          <div className="block sm:hidden">
-            <h1 className="text-base font-bold text-gray-900 dark:text-white">Hospital</h1>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          {/* Emergency controls - Only show if hospital handles emergencies */}
-          {isHandleEmergency && (
-            <>
-              <div className="hidden lg:flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                <Clock className="w-4 h-4" />
-                <span>Last checked: {lastChecked.toLocaleTimeString()}</span>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Header with Animated Icons */}
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 relative">
+        <AnimatedHealthIcons />
+        <div className="container mx-auto px-4 sm:px-6 py-4 relative z-10">
+          {/* Mobile-first responsive header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            {/* Left section - Logo and title */}
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <Link href="/" passHref>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-600 dark:text-gray-400 p-2 sm:p-3 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition w-10 h-10 sm:w-12 sm:h-12"
+                >
+                  <Home className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="sr-only">Home</span>
+                </Button>
+              </Link>
+              <motion.div
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg"
+                animate={{
+                  scale: [1, 1.1, 1],
+                  rotate: [0, 5, -5, 0],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "easeInOut",
+                }}
+              >
+                <Building2 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Hospital Dashboard</h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hidden sm:block">
+                  {isHandleEmergency ? "Manage emergency care & health content" : "Manage health content"}
+                </p>
               </div>
+            </div>
+
+            {/* Right section - Controls */}
+            <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto justify-between sm:justify-end">
+              {/* Manual Refresh Button - Always visible */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={fetchEmergencyAlerts}
-                className="hidden sm:flex items-center space-x-2 bg-transparent text-xs sm:text-sm"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="flex items-center space-x-1 sm:space-x-2 bg-transparent text-xs sm:text-sm"
               >
-                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Refresh</span>
+                <motion.div
+                  animate={refreshing ? { rotate: 360 } : {}}
+                  transition={refreshing ? { duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" } : {}}
+                >
+                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+                </motion.div>
+                <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
               </Button>
-              <div className="flex items-center space-x-2">
-                <span className="hidden md:inline text-xs sm:text-sm text-gray-600 dark:text-gray-400">Available for emergencies</span>
-                <Switch
-                  checked={isAvailable}
-                  onCheckedChange={handleToggleAvailability}
-                  disabled={!isHandleEmergency}
-                />
-              </div>
-            </>
-          )}
-          <motion.div className="relative" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
-            {notifications > 0 && isHandleEmergency && (
-              <motion.span
-                className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
-              >
-                {notifications}
-              </motion.span>
-            )}
-          </motion.div>
-          <ThemeToggle />
-          <UserDropdown />
-        </div>
-      </div>
-    </header>
 
-    {/* Emergency Alerts Banner - Only show if hospital handles emergencies and there are pending alerts */}
-    {notifications > 0 && isHandleEmergency && (
-      <motion.div
-        className="bg-red-500 text-white py-2 px-3 sm:px-6 flex items-center justify-between sticky top-[70px] z-30 shadow-md"
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="font-semibold text-sm sm:text-base">
-            {notifications} New Emergency Alert{notifications > 1 ? "s" : ""}!
-          </span>
+              {/* Emergency controls - Only show if hospital handles emergencies */}
+              {isHandleEmergency && (
+                <>
+                  <div className="hidden lg:flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+                    <Clock className="w-3 h-3" />
+                    <span>Last: {lastChecked.toLocaleTimeString()}</span>
+                  </div>
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hidden md:inline">
+                      Available
+                    </span>
+                    <Switch
+                      checked={isAvailable}
+                      onCheckedChange={handleToggleAvailability}
+                      disabled={!isHandleEmergency}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Notification Bell */}
+              <motion.div className="relative" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" />
+                {notifications > 0 && isHandleEmergency && (
+                  <motion.span
+                    className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center"
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+                  >
+                    {notifications}
+                  </motion.span>
+                )}
+              </motion.div>
+
+              <ThemeToggle />
+              <UserDropdown />
+            </div>
+          </div>
         </div>
-        <Button
-          onClick={() => setActiveTab("emergencies")}
-          className="bg-white text-red-600 hover:bg-gray-100 px-3 sm:px-4 py-1 rounded-md text-xs sm:text-sm font-medium"
+      </header>
+
+      {/* Emergency Alerts Banner - Only show if hospital handles emergencies and there are pending alerts */}
+      {notifications > 0 && isHandleEmergency && (
+        <motion.div
+          className="bg-red-500 text-white py-2 px-4 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between sticky top-[70px] z-30 shadow-md gap-2 sm:gap-0"
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          View Alerts
-        </Button>
-      </motion.div>
-    )}
-
-    <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
-      {/* Welcome Section */}
-      <motion.div
-        className="mb-6 sm:mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Welcome, {user?.name}! 🏥
-        </h2>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-          {isHandleEmergency
-            ? "Manage emergency responses and share important health information with the community."
-            : "Share important health information and connect with the medical community."}
-        </p>
-        {/* Debug info - remove in production */}
-        <div className="mt-2 text-xs text-gray-500">
-          Emergency Handling: {isHandleEmergency ? "Enabled" : "Disabled"} | Available: {isAvailable ? "Yes" : "No"}
-        </div>
-        {/* Display fixed location */}
-        {fixedLocation ? (
-          <p className="text-xs sm:text-sm text-gray-500 mt-2">
-            📍 Fixed Location (from address): {fixedLocation.lat.toFixed(4)}, {fixedLocation.lng.toFixed(4)}
-          </p>
-        ) : (
-          <p className="text-xs sm:text-sm text-gray-500 mt-2">📍 Fixed Location: Not yet available</p>
-        )}
-        {/* Link to All Hospitals Page */}
-        <Link href="/all-hospitals" passHref>
-          <Button variant="outline" className="mt-4 bg-transparent text-sm sm:text-base">
-            <Building2 className="w-4 h-4 mr-2" /> View All Hospitals
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="font-semibold text-sm sm:text-base">
+              {notifications} New Emergency Alert{notifications > 1 ? "s" : ""}!
+            </span>
+          </div>
+          <Button
+            onClick={() => setActiveTab("emergencies")}
+            className="bg-white text-red-600 hover:bg-gray-100 px-3 sm:px-4 py-1 rounded-md text-xs sm:text-sm font-medium"
+          >
+            View Alerts
           </Button>
-        </Link>
-      </motion.div>
+        </motion.div>
+      )}
 
-      {/* Quick Stats */}
-      <motion.div
-        className={`grid grid-cols-1 sm:grid-cols-2 lg:${quickStatsGridCols.replace('grid-cols-', '')} gap-4 sm:gap-6 mb-6 sm:mb-8`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-      >
-        {/* Emergency Alerts Card - Only show if hospital handles emergencies */}
-        {isHandleEmergency && (
-          <motion.div whileHover={{ scale: 1.02, y: -5 }}>
-            <Card className="hover:shadow-lg transition-all duration-300">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Emergency Alerts</p>
-                    <p className="text-xl sm:text-2xl font-bold text-red-600">{emergencyAlerts.length}</p>
-                    <p className="text-xs text-gray-500">{notifications} pending</p>
-                  </div>
-                  <motion.div
-                    className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center"
-                    animate={{
-                      scale: notifications > 0 ? [1, 1.2, 1] : 1,
-                    }}
-                    transition={{ duration: 2, repeat: notifications > 0 ? Number.POSITIVE_INFINITY : 0 }}
-                  >
-                    <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
-                  </motion.div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        <motion.div whileHover={{ scale: 1.02, y: -5 }}>
-          <Card className="hover:shadow-lg transition-all duration-300">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">My Posts</p>
-                  <p className="text-xl sm:text-2xl font-bold text-purple-600">{ownPosts.length}</p>
-                  <p className="text-xs text-gray-500">Published content</p>
-                </div>
-                <motion.div
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center"
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                >
-                  <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
-                </motion.div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Welcome Section */}
+        <motion.div
+          className="mb-6 sm:mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Welcome, {user?.name}! 🏥
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
+            {isHandleEmergency
+              ? "Manage emergency responses and share important health information with the community."
+              : "Share important health information and connect with the medical community."}
+          </p>
+          {/* Debug info - remove in production */}
+          <div className="mt-2 text-xs text-gray-500">
+            Emergency Handling: {isHandleEmergency ? "Enabled" : "Disabled"} | Available: {isAvailable ? "Yes" : "No"}
+          </div>
+          {/* Display fixed location */}
+          {fixedLocation ? (
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">
+              📍 Fixed Location (from address): {fixedLocation.lat.toFixed(4)}, {fixedLocation.lng.toFixed(4)}
+            </p>
+          ) : (
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">📍 Fixed Location: Not yet available</p>
+          )}
+          {/* Link to All Hospitals Page */}
+          <Link href="/all-hospitals" passHref>
+            <Button variant="outline" className="mt-4 bg-transparent text-sm">
+              <Building2 className="w-4 h-4 mr-2" /> View All Hospitals
+            </Button>
+          </Link>
         </motion.div>
 
-        {/* All Posts Card */}
-        <motion.div whileHover={{ scale: 1.02, y: -5 }}>
-          <Card className="hover:shadow-lg transition-all duration-300">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">All Posts</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600">{allOtherPosts.length}</p>
-                  <p className="text-xs text-gray-500">Community content</p>
-                </div>
-                <motion.div
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center"
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                >
-                  <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-                </motion.div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* My Announcements Card */}
-        <motion.div whileHover={{ scale: 1.02, y: -5 }}>
-          <Card className="hover:shadow-lg transition-all duration-300">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">My Announcements</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600">{ownAnnouncements.length}</p>
-                  <p className="text-xs text-gray-500 mt-1">Shared updates</p>
-                </div>
-                <motion.div
-                  className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center"
-                  animate={{
-                    y: [0, -5, 0],
-                  }}
-                  transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
-                >
-                  <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-                </motion.div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Status Card - Only show if hospital handles emergencies */}
-        {isHandleEmergency && (
-          <motion.div whileHover={{ scale: 1.02, y: -5 }}>
-            <Card className="hover:shadow-lg transition-all duration-300">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Status</p>
-                    <p className={`text-xl sm:text-2xl font-bold ${isAvailable ? "text-green-600" : "text-red-600"}`}>
-                      {isAvailable ? "Available" : "Unavailable"}
-                    </p>
-                    <p className="text-xs text-gray-500">Emergency services</p>
-                  </div>
-                  <motion.div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 ${
-                      isAvailable ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900"
-                    } rounded-full flex items-center justify-center`}
-                    animate={{
-                      rotate: [0, 10, -10, 0],
-                    }}
-                    transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY }}
-                  >
-                    <Activity className={`w-5 h-5 sm:w-6 sm:h-6 ${isAvailable ? "text-green-600" : "text-red-600"}`} />
-                  </motion.div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </motion.div>
-
-      {/* Main Content Tabs */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-      >
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className={`grid w-full ${tabsListGridCols} h-auto`}>
-            {isHandleEmergency && (
-              <TabsTrigger value="emergencies" className="text-xs sm:text-sm px-2 py-2 sm:px-4 sm:py-2">
-                Emergency Alerts
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="create" className="text-xs sm:text-sm px-2 py-2 sm:px-4 sm:py-2">
-              Create Post
-            </TabsTrigger>
-            <TabsTrigger value="own-posts" className="text-xs sm:text-sm px-2 py-2 sm:px-4 sm:py-2">
-              Own Posts
-            </TabsTrigger>
-            <TabsTrigger value="all-posts" className="text-xs sm:text-sm px-2 py-2 sm:px-4 sm:py-2">
-              All Posts
-            </TabsTrigger>
-            <TabsTrigger value="announcements" className="text-xs sm:text-sm px-2 py-2 sm:px-4 sm:py-2">
-              Announcements
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Emergency Alerts Tab - Only show if hospital handles emergencies */}
+        {/* Quick Stats */}
+        <motion.div
+          className={`grid ${quickStatsGridCols} gap-4 sm:gap-6 mb-6 sm:mb-8`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          {/* Emergency Alerts Card - Only show if hospital handles emergencies */}
           {isHandleEmergency && (
-            <TabsContent value="emergencies" className="space-y-4 sm:space-y-6">
-              <Card>
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                    <div className="flex items-center space-x-2">
-                      <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="text-base sm:text-lg">Emergency Alerts</span>
-                      <Badge variant="destructive" className="text-xs">
-                        {notifications} pending
-                      </Badge>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAutoRefresh(!autoRefresh)}
-                      className={`${autoRefresh ? "bg-green-50 border-green-200" : ""} text-xs sm:text-sm`}
-                    >
-                      Auto-refresh {autoRefresh ? "ON" : "OFF"}
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
+            <motion.div whileHover={{ scale: 1.02, y: -5 }}>
+              <Card className="hover:shadow-lg transition-all duration-300">
                 <CardContent className="p-4 sm:p-6">
-                  {emergencyAlerts.length > 0 ? (
-                    <div className="space-y-4">
-                      {emergencyAlerts.map((alert, index) => (
-                        <motion.div
-                          key={alert._id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className={`border rounded-lg p-3 sm:p-4 hover:shadow-lg transition-all duration-300 cursor-pointer ${
-                            alert.hospitalAlertStatus === "pending"
-                              ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
-                              : alert.status === "accepted"
-                                ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
-                                : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
-                          }`}
-                          onClick={() => handleAlertClick(alert)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
-                                <motion.div
-                                  className={`w-3 h-3 rounded-full ${
-                                    alert.hospitalAlertStatus === "pending"
-                                      ? "bg-red-500"
-                                      : alert.status === "accepted"
-                                        ? "bg-green-500"
-                                        : "bg-gray-500"
-                                  }`}
-                                  animate={{ scale: alert.hospitalAlertStatus === "pending" ? [1, 1.2, 1] : 1 }}
-                                  transition={{
-                                    duration: 1,
-                                    repeat: alert.hospitalAlertStatus === "pending" ? Number.POSITIVE_INFINITY : 0,
-                                  }}
-                                />
-                                <h3
-                                  className={`font-semibold text-sm sm:text-lg ${
-                                    alert.hospitalAlertStatus === "pending"
-                                      ? "text-red-800 dark:text-red-200"
-                                      : alert.status === "accepted"
-                                        ? "text-green-800 dark:text-green-200"
-                                        : "text-gray-800 dark:text-gray-200"
-                                  }`}
-                                >
-                                  🚨 EMERGENCY ALERT
-                                </h3>
-                                <Badge className={`${getPriorityColor(alert.priority)} text-xs`}>
-                                  {alert.priority.toUpperCase()}
-                                </Badge>
-                                {alert.status === "accepted" && (
-                                  <Badge variant="default" className="bg-green-600 text-xs">
-                                    ACCEPTED
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Emergency Alerts</p>
+                      <p className="text-xl sm:text-2xl font-bold text-red-600">{emergencyAlerts.length}</p>
+                      <p className="text-xs text-gray-500">{notifications} pending</p>
+                    </div>
+                    <motion.div
+                      className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center"
+                      animate={{
+                        scale: notifications > 0 ? [1, 1.2, 1] : 1,
+                      }}
+                      transition={{ duration: 2, repeat: notifications > 0 ? Number.POSITIVE_INFINITY : 0 }}
+                    >
+                      <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
+                    </motion.div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          <motion.div whileHover={{ scale: 1.02, y: -5 }}>
+            <Card className="hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">My Posts</p>
+                    <p className="text-xl sm:text-2xl font-bold text-purple-600">{ownPosts.length}</p>
+                    <p className="text-xs text-gray-500">Published content</p>
+                  </div>
+                  <motion.div
+                    className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                  >
+                    <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* All Posts Card */}
+          <motion.div whileHover={{ scale: 1.02, y: -5 }}>
+            <Card className="hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">All Posts</p>
+                    <p className="text-xl sm:text-2xl font-bold text-blue-600">{allOtherPosts.length}</p>
+                    <p className="text-xs text-gray-500">Community content</p>
+                  </div>
+                  <motion.div
+                    className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                  >
+                    <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* My Announcements Card */}
+          <motion.div whileHover={{ scale: 1.02, y: -5 }}>
+            <Card className="hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">My Announcements</p>
+                    <p className="text-xl sm:text-2xl font-bold text-blue-600">{ownAnnouncements.length}</p>
+                    <p className="text-xs text-gray-500 mt-1">Shared updates</p>
+                  </div>
+                  <motion.div
+                    className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center"
+                    animate={{
+                      y: [0, -5, 0],
+                    }}
+                    transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
+                  >
+                    <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Status Card - Only show if hospital handles emergencies */}
+          {isHandleEmergency && (
+            <motion.div whileHover={{ scale: 1.02, y: -5 }}>
+              <Card className="hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Status</p>
+                      <p className={`text-xl sm:text-2xl font-bold ${isAvailable ? "text-green-600" : "text-red-600"}`}>
+                        {isAvailable ? "Available" : "Unavailable"}
+                      </p>
+                      <p className="text-xs text-gray-500">Emergency services</p>
+                    </div>
+                    <motion.div
+                      className={`w-10 h-10 sm:w-12 sm:h-12 ${
+                        isAvailable ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900"
+                      } rounded-full flex items-center justify-center`}
+                      animate={{
+                        rotate: [0, 10, -10, 0],
+                      }}
+                      transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY }}
+                    >
+                      <Activity
+                        className={`w-5 h-5 sm:w-6 sm:h-6 ${isAvailable ? "text-green-600" : "text-red-600"}`}
+                      />
+                    </motion.div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* Main Content Tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className={`grid w-full ${tabsListGridCols} text-xs sm:text-sm`}>
+              {isHandleEmergency && <TabsTrigger value="emergencies">Emergency Alerts</TabsTrigger>}
+              <TabsTrigger value="create">Create Post</TabsTrigger>
+              <TabsTrigger value="own-posts">Own Posts</TabsTrigger>
+              <TabsTrigger value="all-posts">All Posts</TabsTrigger>
+              <TabsTrigger value="announcements">Announcements</TabsTrigger>
+            </TabsList>
+
+            {/* Emergency Alerts Tab - Only show if hospital handles emergencies */}
+            {isHandleEmergency && (
+              <TabsContent value="emergencies" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Shield className="w-5 h-5" />
+                        <span>Emergency Alerts</span>
+                        <Badge variant="destructive">{notifications} pending</Badge>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAutoRefresh(!autoRefresh)}
+                        className={autoRefresh ? "bg-green-50 border-green-200" : ""}
+                      >
+                        Auto-refresh {autoRefresh ? "ON" : "OFF"}
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {emergencyAlerts.length > 0 ? (
+                      <div className="space-y-4">
+                        {emergencyAlerts.map((alert, index) => (
+                          <motion.div
+                            key={alert._id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className={`border rounded-lg p-4 hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                              alert.hospitalAlertStatus === "pending"
+                                ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
+                                : alert.status === "accepted"
+                                  ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
+                                  : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800" // Default for read/other
+                            }`}
+                            onClick={() => handleAlertClick(alert)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                                  <motion.div
+                                    className={`w-3 h-3 rounded-full ${
+                                      alert.hospitalAlertStatus === "pending"
+                                        ? "bg-red-500"
+                                        : alert.status === "accepted"
+                                          ? "bg-green-500"
+                                          : "bg-gray-500"
+                                    }`}
+                                    animate={{ scale: alert.hospitalAlertStatus === "pending" ? [1, 1.2, 1] : 1 }}
+                                    transition={{
+                                      duration: 1,
+                                      repeat: alert.hospitalAlertStatus === "pending" ? Number.POSITIVE_INFINITY : 0,
+                                    }}
+                                  />
+                                  <h3
+                                    className={`font-semibold text-base sm:text-lg ${
+                                      alert.hospitalAlertStatus === "pending"
+                                        ? "text-red-800 dark:text-red-200"
+                                        : alert.status === "accepted"
+                                          ? "text-green-800 dark:text-green-200"
+                                          : "text-gray-800 dark:text-gray-200"
+                                    }`}
+                                  >
+                                    🚨 EMERGENCY ALERT
+                                  </h3>
+                                  <Badge className={getPriorityColor(alert.priority)}>
+                                    {alert.priority.toUpperCase()}
                                   </Badge>
-                                )}
-                                {alert.hospitalAlertStatus === "read" && alert.status === "pending" && (
-                                  <Badge variant="outline" className="bg-yellow-600 text-white text-xs">
-                                    VIEWED
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                  <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-sm sm:text-base">
-                                    Patient Information
-                                  </h4>
-                                  <div className="space-y-1 text-xs sm:text-sm">
-                                    <div className="flex items-center space-x-2">
-                                      <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                                      <span>{alert.userInfo.name}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                                      <span>{alert.userInfo.phone}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                                      <span className="truncate">{alert.userInfo.email}</span>
+                                  {alert.status === "accepted" && (
+                                    <Badge variant="default" className="bg-green-600">
+                                      ACCEPTED
+                                    </Badge>
+                                  )}
+                                  {alert.hospitalAlertStatus === "read" && alert.status === "pending" && (
+                                    <Badge variant="outline" className="bg-yellow-600 text-white">
+                                      VIEWED
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                                  <div>
+                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                                      Patient Information
+                                    </h4>
+                                    <div className="space-y-1 text-sm">
+                                      <div className="flex items-center space-x-2">
+                                        <User className="w-4 h-4 text-gray-500" />
+                                        <span>{alert.userInfo.name}</span>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Phone className="w-4 h-4 text-gray-500" />
+                                        <span>{alert.userInfo.phone}</span>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Mail className="w-4 h-4 text-gray-500" />
+                                        <span className="break-all">{alert.userInfo.email}</span>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                                <div>
-                                  <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-sm sm:text-base">
-                                    Location & Distance
-                                  </h4>
-                                  <div className="space-y-1 text-xs sm:text-sm">
-                                    {alert.distance && (
-                                      <div className="flex items-center space-x-2">
-                                        <Navigation className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
-                                        <span className="font-semibold text-green-600">{alert.distance}km away</span>
-                                        {alert.proximityMethod && (
-                                          <span className="text-xs text-gray-500">({alert.proximityMethod})</span>
-                                        )}
-                                      </div>
-                                    )}
-                                    {/* Google Maps Integration */}
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-2 sm:p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                                      <div className="flex items-start space-x-2">
-                                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 mt-0.5" />
-                                        <div className="flex-1">
-                                          <p className="font-medium text-blue-800 dark:text-blue-200 text-xs sm:text-sm">
-                                            Patient Location:
-                                          </p>
-                                          <p className="text-blue-700 dark:text-blue-300 text-xs sm:text-sm mb-2">
-                                            📍{" "}
-                                            {alert.location?.lat && alert.location?.lng
-                                              ? `GPS: ${alert.location.lat.toFixed(4)}, ${alert.location.lng.toFixed(4)}`
-                                              : formatLocationAddress(alert.location?.address) ||
-                                                "Location details not available"}
-                                          </p>
-                                          {/* Google Maps Rectangle Button */}
-                                          <motion.button
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              openGoogleMaps(alert.location)
-                                            }}
-                                            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium flex items-center justify-center space-x-2 transition-colors"
-                                          >
-                                            <Map className="w-3 h-3 sm:w-4 sm:h-4" />
-                                            <span>Open in Google Maps</span>
-                                            <ExternalLink className="w-2 h-2 sm:w-3 sm:h-3" />
-                                          </motion.button>
-                                          {alert.location?.lat && alert.location?.lng && (
-                                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                                              GPS: {alert.location.lat.toFixed(4)}, {alert.location.lng.toFixed(4)}
-                                            </p>
+                                  <div>
+                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                                      Location & Distance
+                                    </h4>
+                                    <div className="space-y-1 text-sm">
+                                      {alert.distance && (
+                                        <div className="flex items-center space-x-2">
+                                          <Navigation className="w-4 h-4 text-green-500" />
+                                          <span className="font-semibold text-green-600">{alert.distance}km away</span>
+                                          {alert.proximityMethod && (
+                                            <span className="text-xs text-gray-500">({alert.proximityMethod})</span>
                                           )}
+                                        </div>
+                                      )}
+                                      {/* Google Maps Integration */}
+                                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                                        <div className="flex items-start space-x-2">
+                                          <MapPin className="w-4 h-4 text-blue-500 mt-0.5" />
+                                          <div className="flex-1">
+                                            <p className="font-medium text-blue-800 dark:text-blue-200 text-sm">
+                                              Patient Location:
+                                            </p>
+                                            <p className="text-blue-700 dark:text-blue-300 text-sm mb-2">
+                                              📍{" "}
+                                              {alert.location?.lat && alert.location?.lng
+                                                ? `GPS: ${alert.location.lat.toFixed(4)}, ${alert.location.lng.toFixed(4)}`
+                                                : formatLocationAddress(alert.location?.address) ||
+                                                  "Location details not available"}
+                                            </p>
+                                            {/* Google Maps Rectangle Button */}
+                                            <motion.button
+                                              whileHover={{ scale: 1.02 }}
+                                              whileTap={{ scale: 0.98 }}
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                openGoogleMaps(alert.location)
+                                              }}
+                                              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium flex items-center justify-center space-x-2 transition-colors"
+                                            >
+                                              <Map className="w-4 h-4" />
+                                              <span>Open in Google Maps</span>
+                                              <ExternalLink className="w-3 h-3" />
+                                            </motion.button>
+                                            {alert.location?.lat && alert.location?.lng && (
+                                              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                                                GPS: {alert.location.lat.toFixed(4)}, {alert.location.lng.toFixed(4)}
+                                              </p>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                                <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                                  <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
-                                  <span>{formatTimeAgo(alert.createdAt)}</span>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {alert.hospitalAlertStatus === "pending" && (
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleAlertClick(alert)
-                                      }}
-                                      className="animate-pulse text-xs sm:text-sm"
-                                    >
-                                      🚨 RESPOND NOW
-                                    </Button>
-                                  )}
-                                  {alert.status === "accepted" && (
-                                    <>
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <Timer className="w-4 h-4" />
+                                    <span>{formatTimeAgo(alert.createdAt)}</span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {alert.hospitalAlertStatus === "pending" && (
                                       <Button
                                         size="sm"
-                                        variant="outline"
+                                        variant="destructive"
                                         onClick={(e) => {
                                           e.stopPropagation()
-                                          handleShareAlert(alert)
+                                          handleAlertClick(alert)
                                         }}
-                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 text-xs sm:text-sm"
+                                        className="animate-pulse text-xs sm:text-sm"
                                       >
-                                        <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                        Share
+                                        🚨 RESPOND NOW
                                       </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleRemoveAlertFromView(alert._id)
-                                        }}
-                                        className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs sm:text-sm"
-                                      >
-                                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                                        Remove
-                                      </Button>
-                                    </>
-                                  )}
+                                    )}
+                                    {alert.status === "accepted" && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleShareAlert(alert)
+                                          }}
+                                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 text-xs sm:text-sm"
+                                        >
+                                          <Share2 className="w-4 h-4 mr-1" />
+                                          Share
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleRemoveAlertFromView(alert._id)
+                                          }}
+                                          className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs sm:text-sm"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                          Remove
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                          No Emergency Alerts
+                        </h3>
+                        <p className="text-gray-500">No emergency alerts in your area at the moment</p>
+                        <p className="text-sm text-gray-400 mt-2">System checks every 30 seconds for new alerts</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Create Post Tab */}
+            <TabsContent value="create" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Plus className="w-5 h-5" />
+                    <span>Create New Hospital Post</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Post Title *</label>
+                    <Input
+                      value={newPost.title}
+                      onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+                      placeholder="e.g., New Emergency Department Now Open 24/7"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Content *</label>
+                    <Textarea
+                      value={newPost.content}
+                      onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+                      placeholder="Share hospital updates, health tips, or important announcements..."
+                      className="w-full min-h-[200px]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Category *</label>
+                      <Select
+                        value={newPost.category}
+                        onValueChange={(value) => setNewPost({ ...newPost, category: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
+                    <Input
+                      value={newPost.tags}
+                      onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
+                      placeholder="e.g., emergency-care, cardiology, 24-7-service, health-tips"
+                      className="w-full"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleCreatePost}
+                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Create Post
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Own Posts Tab */}
+            <TabsContent value="own-posts" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Building2 className="w-5 h-5 text-purple-600" />
+                    <span>My Posts</span>
+                    <Badge variant="secondary">{ownPosts.length} posts</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {ownPosts.length > 0 ? (
+                    <div className="space-y-4">
+                      {ownPosts.map((post, index) => (
+                        <motion.div
+                          key={post._id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          whileHover={{ scale: 1.01 }}
+                          className="border rounded-lg p-4 hover:shadow-md transition-all duration-300"
+                        >
+                          <div className="flex flex-col sm:flex-row items-start justify-between mb-3 gap-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <Badge variant="outline">{post.category.replace("-", " ")}</Badge>
+                                <Badge variant={post.isApproved ? "default" : "destructive"}>
+                                  {post.isApproved ? "Approved" : "Pending"}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm" onClick={() => setEditingPost(post)}>
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl">
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Post</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <Input
+                                      defaultValue={post.title}
+                                      placeholder="Post title"
+                                      onChange={(e) =>
+                                        setEditingPost((prev) => (prev ? { ...prev, title: e.target.value } : null))
+                                      }
+                                    />
+                                    <Textarea
+                                      defaultValue={post.content}
+                                      placeholder="Post content"
+                                      className="min-h-[200px]"
+                                      onChange={(e) =>
+                                        setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : null))
+                                      }
+                                    />
+                                    <div className="flex space-x-2">
+                                      <Button
+                                        onClick={() =>
+                                          editingPost &&
+                                          handleEditPost(editingPost._id, {
+                                            title: editingPost.title,
+                                            content: editingPost.content,
+                                          })
+                                        }
+                                        className="bg-purple-600 hover:bg-purple-700"
+                                      >
+                                        Save Changes
+                                      </Button>
+                                      <Button variant="outline" onClick={() => setEditingPost(null)}>
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              <Button variant="destructive" size="sm" onClick={() => handleDeletePost(post._id)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-3">{post.content}</p>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {post.tags.map((tag, tagIndex) => (
+                              <Badge key={tagIndex} variant="secondary" className="text-xs">
+                                <Tag className="w-3 h-3 mr-1" />
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                            <div className="flex items-center space-x-2 text-gray-600">
+                              <Eye className="w-4 h-4" />
+                              <span className="text-sm">View details</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-gray-500">
+                              <Calendar className="w-4 h-4" />
+                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </motion.div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 sm:py-12">
-                      <AlertTriangle className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                        No Emergency Alerts
-                      </h3>
-                      <p className="text-sm sm:text-base text-gray-500">No emergency alerts in your area at the moment</p>
-                      <p className="text-xs sm:text-sm text-gray-400 mt-2">System checks every 30 seconds for new alerts</p>
+                    <div className="text-center py-12">
+                      <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No posts yet</h3>
+                      <p className="text-gray-500 mb-4">Start sharing hospital updates and health information</p>
+                      <Button onClick={() => setActiveTab("create")}>Create Your First Post</Button>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
-          )}
 
-          {/* Create Post Tab */}
-          <TabsContent value="create" className="space-y-4 sm:space-y-6">
-            <Card>
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span>Create New Hospital Post</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Post Title *</label>
-                  <Input
-                    value={newPost.title}
-                    onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                    placeholder="e.g., New Emergency Department Now Open 24/7"
-                    className="w-full text-sm sm:text-base"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Content *</label>
-                  <Textarea
-                    value={newPost.content}
-                    onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                    placeholder="Share hospital updates, health tips, or important announcements..."
-                    className="w-full min-h-[150px] sm:min-h-[200px] text-sm sm:text-base"
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Category *</label>
-                    <Select
-                      value={newPost.category}
-                      onValueChange={(value) => setNewPost({ ...newPost, category: value })}
-                    >
-                      <SelectTrigger className="text-sm sm:text-base">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
-                  <Input
-                    value={newPost.tags}
-                    onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
-                    placeholder="e.g., emergency-care, cardiology, 24-7-service, health-tips"
-                    className="w-full text-sm sm:text-base"
-                  />
-                </div>
-                <Button
-                  onClick={handleCreatePost}
-                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-sm sm:text-base py-2 sm:py-3"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Create Post
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Own Posts Tab */}
-          <TabsContent value="own-posts" className="space-y-4 sm:space-y-6">
-            <Card>
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-                  <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-                  <span>My Posts</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {ownPosts.length} posts
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                {ownPosts.length > 0 ? (
-                  <div className="space-y-4">
-                    {ownPosts.map((post, index) => (
-                      <motion.div
-                        key={post._id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.01 }}
-                        className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-all duration-300"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 space-y-2 sm:space-y-0">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">{post.title}</h3>
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <Badge variant="outline" className="text-xs">
-                                {post.category.replace("-", " ")}
-                              </Badge>
-                              <Badge variant={post.isApproved ? "default" : "destructive"} className="text-xs">
-                                {post.isApproved ? "Approved" : "Pending"}
-                              </Badge>
+            {/* All Posts Tab (formerly Doctor Posts Tab) */}
+            <TabsContent value="all-posts" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Stethoscope className="w-5 h-5 text-green-600" />
+                    <span>All Posts</span>
+                    <Badge variant="secondary">{allOtherPosts.length} posts</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {allOtherPosts.length > 0 ? (
+                    <div className="space-y-4">
+                      {allOtherPosts.map((post, index) => (
+                        <motion.div
+                          key={post._id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          whileHover={{ scale: 1.01 }}
+                          className="border rounded-lg p-4 hover:shadow-md transition-all duration-300"
+                        >
+                          <div className="flex flex-col sm:flex-row items-start justify-between mb-3 gap-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                                {post.authorType === "Doctor" ? (
+                                  <Stethoscope className="w-5 h-5 text-green-600" />
+                                ) : (
+                                  <Building2 className="w-5 h-5 text-purple-600" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-semibold">
+                                  {post.authorType === "Doctor" ? "Dr." : ""} {post.postby}
+                                </p>
+                                <p className="text-sm text-gray-500 capitalize">{post.authorType}</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-2 self-start">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setEditingPost(post)}>
-                                  <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>Edit Post</DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <Input
-                                    defaultValue={post.title}
-                                    placeholder="Post title"
-                                    className="text-sm sm:text-base"
-                                    onChange={(e) =>
-                                      setEditingPost((prev) => (prev ? { ...prev, title: e.target.value } : null))
-                                    }
-                                  />
-                                  <Textarea
-                                    defaultValue={post.content}
-                                    placeholder="Post content"
-                                    className="min-h-[150px] sm:min-h-[200px] text-sm sm:text-base"
-                                    onChange={(e) =>
-                                      setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : null))
-                                    }
-                                  />
-                                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                                    <Button
-                                      onClick={() =>
-                                        editingPost &&
-                                        handleEditPost(editingPost._id, {
-                                          title: editingPost.title,
-                                          content: editingPost.content,
-                                        })
-                                      }
-                                      className="bg-purple-600 hover:bg-purple-700 text-sm sm:text-base"
-                                    >
-                                      Save Changes
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => setEditingPost(null)}
-                                      className="text-sm sm:text-base"
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            <Button variant="destructive" size="sm" onClick={() => handleDeletePost(post._id)}>
-                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-3 text-sm sm:text-base">
-                          {post.content}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {post.tags.map((tag, tagIndex) => (
-                            <Badge key={tagIndex} variant="secondary" className="text-xs">
-                              <Tag className="w-3 h-3 mr-1" />
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                          <div className="flex items-center space-x-2 text-gray-600">
-                            <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span className="text-xs sm:text-sm">View details</span>
-                          </div>
-                          <div className="flex items-center space-x-2 text-xs text-gray-500">
-                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 sm:py-12">
-                    <MessageSquare className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                      No posts yet
-                    </h3>
-                    <p className="text-sm sm:text-base text-gray-500 mb-4">
-                      Start sharing hospital updates and health information
-                    </p>
-                    <Button onClick={() => setActiveTab("create")} className="text-sm sm:text-base">
-                      Create Your First Post
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* All Posts Tab */}
-          <TabsContent value="all-posts" className="space-y-4 sm:space-y-6">
-            <Card>
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-                  <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                  <span>All Posts</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {allOtherPosts.length} posts
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                {allOtherPosts.length > 0 ? (
-                  <div className="space-y-4">
-                    {allOtherPosts.map((post, index) => (
-                      <motion.div
-                        key={post._id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.01 }}
-                        className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-all duration-300"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 space-y-2 sm:space-y-0">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center flex-shrink-0">
-                              {post.authorType === "Doctor" ? (
-                                <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                              ) : (
-                                <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-sm sm:text-base truncate">
-                                {post.authorType === "Doctor" ? "Dr." : ""} {post.postby}
-                              </p>
-                              <p className="text-xs sm:text-sm text-gray-500 capitalize">{post.authorType}</p>
-                            </div>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-                            <Badge variant="outline" className="text-xs">
-                              {post.category.replace("-", " ")}
-                            </Badge>
-                            <span className="text-xs text-gray-500">
-                              {new Date(post.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                        <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">{post.title}</h3>
-                        <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-3 text-sm sm:text-base">
-                          {post.content}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {post.tags.map((tag, tagIndex) => (
-                            <Badge key={tagIndex} variant="secondary" className="text-xs">
-                              #{tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 sm:py-12">
-                    <Stethoscope className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                      No posts yet
-                    </h3>
-                    <p className="text-sm sm:text-base text-gray-500">
-                      Posts from other hospitals and doctors will appear here
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Announcements Tab */}
-          <TabsContent value="announcements" className="space-y-4 sm:space-y-6">
-            <Card>
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-                  <Megaphone className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                  <span>My Announcements</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {ownAnnouncements.length} announcements
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-                <div className="space-y-4 border-b pb-4 mb-4">
-                  <h3 className="text-base sm:text-lg font-semibold">Create New Announcement</h3>
-                  <Dialog open={isAnnouncementFormOpen} onOpenChange={setIsAnnouncementFormOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        onClick={() => openAnnouncementForm(null)}
-                        className="w-full text-sm sm:text-base py-2 sm:py-3"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create New Announcement
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Create New Announcement</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2">Title *</label>
-                          <Input
-                            value={newAnnouncement.title}
-                            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
-                            placeholder="e.g., Holiday Notice: Clinic Closed on Dec 25th"
-                            className="w-full text-sm sm:text-base"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">Content *</label>
-                          <Textarea
-                            value={newAnnouncement.content}
-                            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
-                            placeholder="Share important updates with your network..."
-                            className="w-full min-h-[100px] sm:min-h-[120px] text-sm sm:text-base"
-                          />
-                        </div>
-                        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                          <Button
-                            onClick={handleCreateAnnouncement}
-                            disabled={isSavingAnnouncement}
-                            className="bg-blue-600 hover:bg-blue-700 text-sm sm:text-base"
-                          >
-                            {isSavingAnnouncement ? "Saving..." : "Save Announcement"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={closeAnnouncementForm}
-                            className="text-sm sm:text-base"
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold mb-4">My Published Announcements</h3>
-                {ownAnnouncements.length > 0 ? (
-                  <div className="space-y-4">
-                    {ownAnnouncements.map((announcement, index) => (
-                      <motion.div
-                        key={announcement._id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.01 }}
-                        className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-all duration-300"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 space-y-2 sm:space-y-0">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">
-                              {announcement.title}
-                            </h3>
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <Badge variant="outline" className="text-xs">
-                                {announcement.ownerType}
-                              </Badge>
-                              <span className="text-xs sm:text-sm text-gray-500">
-                                Announced by: {announcement.announcedBy}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline">{post.category.replace("-", " ")}</Badge>
+                              <span className="text-xs text-gray-500">
+                                {new Date(post.createdAt).toLocaleDateString()}
                               </span>
                             </div>
                           </div>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteAnnouncement(announcement._id)}
-                            className="self-start"
-                          >
-                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
-                        </div>
-                        <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-3 text-sm sm:text-base">
-                          {announcement.content}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 text-xs text-gray-500">
-                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span>{new Date(announcement.createdAt).toLocaleDateString()}</span>
+                          <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+                          <p className="text-gray-700 dark:text-gray-300 mb-4">{post.content}</p>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {post.tags.map((tag, tagIndex) => (
+                              <Badge key={tagIndex} variant="secondary" className="text-xs">
+                                #{tag}
+                              </Badge>
+                            ))}
                           </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 sm:py-12">
-                    <Megaphone className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                      No announcements yet
-                    </h3>
-                    <p className="text-sm sm:text-base text-gray-500 mb-4">
-                      Share important updates with your network
-                    </p>
-                    <Button onClick={() => openAnnouncementForm(null)} className="text-sm sm:text-base">
-                      Create Your First Announcement
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </motion.div>
-    </div>
-
-    <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
-            <span className="text-base sm:text-lg">Emergency Alert Response</span>
-          </DialogTitle>
-        </DialogHeader>
-        {selectedAlert && (
-          <div className="space-y-4 sm:space-y-6">
-            <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="font-semibold text-sm sm:text-base">
-                🚨 EMERGENCY: Immediate medical attention required
-              </AlertDescription>
-            </Alert>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <h3 className="font-semibold mb-3 text-sm sm:text-base">Patient Information</h3>
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <div className="flex items-center space-x-2">
-                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                    <span className="font-medium">{selectedAlert.userInfo.name}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                    <span>{selectedAlert.userInfo.phone}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                    <span className="break-all">{selectedAlert.userInfo.email}</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-3 text-sm sm:text-base">Emergency Details</h3>
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Badge className={`${getPriorityColor(selectedAlert.priority)} text-xs`}>
-                      {selectedAlert.priority.toUpperCase()} PRIORITY
-                    </Badge>
-                  </div>
-                  {selectedAlert.distance && (
-                    <div className="flex items-center space-x-2">
-                      <Navigation className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
-                      <span className="font-semibold text-green-600">{selectedAlert.distance}km away</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Stethoscope className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No posts yet</h3>
+                      <p className="text-gray-500">Posts from other hospitals and doctors will appear here</p>
                     </div>
                   )}
-                  <div className="flex items-center space-x-2">
-                    <Timer className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                    <span>{formatTimeAgo(selectedAlert.createdAt)}</span>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Announcements Tab */}
+            <TabsContent value="announcements" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Megaphone className="w-5 h-5 text-blue-600" />
+                    <span>My Announcements</span>
+                    <Badge variant="secondary">{ownAnnouncements.length} announcements</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4 border-b pb-4 mb-4">
+                    <h3 className="text-lg font-semibold">Create New Announcement</h3>
+                    <Dialog open={isAnnouncementFormOpen} onOpenChange={setIsAnnouncementFormOpen}>
+                      <DialogTrigger asChild>
+                        <Button onClick={() => openAnnouncementForm(null)} className="w-full">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create New Announcement
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>{"Create New Announcement"}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Title *</label>
+                            <Input
+                              value={newAnnouncement.title}
+                              onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+                              placeholder="e.g., Holiday Notice: Clinic Closed on Dec 25th"
+                              className="w-full"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Content *</label>
+                            <Textarea
+                              value={newAnnouncement.content}
+                              onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
+                              placeholder="Share important updates with your network..."
+                              className="w-full min-h-[120px]"
+                            />
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              onClick={handleCreateAnnouncement}
+                              disabled={isSavingAnnouncement}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              {isSavingAnnouncement ? "Saving..." : "Save Announcement"}
+                            </Button>
+                            <Button variant="outline" onClick={closeAnnouncementForm}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <h3 className="text-lg font-semibold mb-4">My Published Announcements</h3>
+                  {ownAnnouncements.length > 0 ? (
+                    <div className="space-y-4">
+                      {ownAnnouncements.map((announcement, index) => (
+                        <motion.div
+                          key={announcement._id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          whileHover={{ scale: 1.01 }}
+                          className="border rounded-lg p-4 hover:shadow-md transition-all duration-300"
+                        >
+                          <div className="flex flex-col sm:flex-row items-start justify-between mb-3 gap-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg mb-2">{announcement.title}</h3>
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <Badge variant="outline">{announcement.ownerType}</Badge>
+                                <span className="text-sm text-gray-500">Announced by: {announcement.announcedBy}</span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteAnnouncement(announcement._id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-3">{announcement.content}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2 text-xs text-gray-500">
+                              <Calendar className="w-4 h-4" />
+                              <span>{new Date(announcement.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Megaphone className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                        No announcements yet
+                      </h3>
+                      <p className="text-gray-500 mb-4">Share important updates with your network</p>
+                      <Button onClick={() => openAnnouncementForm(null)}>Create Your First Announcement</Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </div>
+
+      <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <span>Emergency Alert Response</span>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAlert && (
+            <div className="space-y-6">
+              <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="font-semibold">
+                  🚨 EMERGENCY: Immediate medical attention required
+                </AlertDescription>
+              </Alert>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold mb-3">Patient Information</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">{selectedAlert.userInfo.name}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Phone className="w-4 h-4 text-gray-500" />
+                      <span>{selectedAlert.userInfo.phone}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Mail className="w-4 h-4 text-gray-500" />
+                      <span className="break-all">{selectedAlert.userInfo.email}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-3">Emergency Details</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <Badge className={getPriorityColor(selectedAlert.priority)}>
+                        {selectedAlert.priority.toUpperCase()} PRIORITY
+                      </Badge>
+                    </div>
+                    {selectedAlert.distance && (
+                      <div className="flex items-center space-x-2">
+                        <Navigation className="w-4 h-4 text-green-500" />
+                        <span className="font-semibold text-green-600">{selectedAlert.distance}km away</span>
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      <Timer className="w-4 h-4 text-gray-500" />
+                      <span>{formatTimeAgo(selectedAlert.createdAt)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-3 text-sm sm:text-base">Location</h3>
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 sm:p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex items-start space-x-2">
-                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 mt-0.5" />
-                  <div className="flex-1 space-y-2">
-                    {selectedAlert.location?.lat && selectedAlert.location?.lng ? (
-                      <>
-                        <p className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
-                          📍 GPS Coordinates: {selectedAlert.location.lat.toFixed(6)}, {selectedAlert.location.lng.toFixed(6)}
-                        </p>
-                        <Button
-                          onClick={() =>
-                            openGoogleMaps({
-                              lat: selectedAlert.location.lat,
-                              lng: selectedAlert.location.lng
-                            })
-                          }
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                        >
-                          <Map className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                          Open in Google Maps
-                          <ExternalLink className="w-2 h-2 sm:w-3 sm:h-3 ml-2" />
-                        </Button>
-                        {selectedAlert.location?.address && (
-                          <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-400">
-                            {formatLocationAddress(selectedAlert.location.address)}<br />
-                            🏠 This is the patient's home address. If GPS is not accurate, please call the patient to confirm:
-                            <br />
-                            👉 Ask: "Are you currently at your home address?"
-                            <br />
-                            ✅ If yes, use this address.
-                            <br />
-                            ❌ If not, ask for the current location.
+              <div>
+                <h3 className="font-semibold mb-3">Location</h3>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="w-5 h-5 text-blue-500 mt-0.5" />
+                    <div className="flex-1 space-y-2">
+                      {selectedAlert.location?.lat && selectedAlert.location?.lng ? (
+                        <>
+                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                            📍 GPS Coordinates: {selectedAlert.location.lat.toFixed(6)},{" "}
+                            {selectedAlert.location.lng.toFixed(6)}
                           </p>
-                        )}
+                          <Button
+                            onClick={() =>
+                              openGoogleMaps({
+                                lat: selectedAlert.location.lat,
+                                lng: selectedAlert.location.lng,
+                              })
+                            }
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <Map className="w-4 h-4 mr-2" />
+                            Open in Google Maps
+                            <ExternalLink className="w-3 h-3 ml-2" />
+                          </Button>
+                          {selectedAlert.location?.address && (
+                            <p className="text-sm text-blue-700 dark:text-blue-400">
+                              {formatLocationAddress(selectedAlert.location.address)}
+                              <br />🏠 This is the patient's home address. If GPS is not accurate, please call the
+                              patient to confirm:
+                              <br />👉 Ask: "Are you currently at your home address?"
+                              <br />✅ If yes, use this address.
+                              <br />❌ If not, ask for the current location.
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium text-red-600">⚠️ GPS coordinates not available.</p>
+                          {selectedAlert.location?.address && (
+                            <p className="text-sm text-blue-700 dark:text-blue-400">
+                              🏠 Reported address: <br />
+                              {formatLocationAddress(selectedAlert.location.address)}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {selectedAlert.message && (
+                <div>
+                  <h3 className="font-semibold mb-3">Emergency Message</h3>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <p className="text-gray-700 dark:text-gray-300">{selectedAlert.message}</p>
+                  </div>
+                </div>
+              )}
+              {selectedAlert.status === "pending" && (
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 pt-4 border-t">
+                  <Button
+                    onClick={() => handleResponse("accept")}
+                    disabled={responding}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+                  >
+                    {responding ? (
+                      <>
+                        <motion.div
+                          className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                        />
+                        Accepting...
                       </>
                     ) : (
                       <>
-                        <p className="text-xs sm:text-sm font-medium text-red-600">
-                          ⚠️ GPS coordinates not available.
-                        </p>
-                        {selectedAlert.location?.address && (
-                          <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-400">
-                            🏠 Reported address: <br />
-                            {formatLocationAddress(selectedAlert.location.address)}
-                          </p>
-                        )}
+                        <CheckCircle className="w-5 h-5 mr-2" />🚑 ACCEPT & DISPATCH AMBULANCE
                       </>
                     )}
+                  </Button>
+                  <Button
+                    onClick={() => handleResponse("deny")}
+                    disabled={responding}
+                    variant="destructive"
+                    className="flex-1 font-semibold py-3"
+                  >
+                    {responding ? (
+                      "Processing..."
+                    ) : (
+                      <>
+                        <XCircle className="w-5 h-5 mr-2" />
+                        DECLINE
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+              {selectedAlert.status === "accepted" && (
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="font-semibold text-green-800 dark:text-green-200">
+                      Emergency Accepted - Ambulance Dispatched
+                    </span>
                   </div>
+                  {selectedAlert.acceptedBy && (
+                    <p className="text-sm text-green-700 dark:text-green-300 mt-2">
+                      Handled by: {selectedAlert.acceptedBy.name}
+                    </p>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
-            {selectedAlert.message && (
-              <div>
-                <h3 className="font-semibold mb-3 text-sm sm:text-base">Emergency Message</h3>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 rounded-lg">
-                  <p className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm">{selectedAlert.message}</p>
-                </div>
-              </div>
-            )}
-            {selectedAlert.status === "pending" && (
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 pt-4 border-t">
-                <Button
-                  onClick={() => handleResponse("accept")}
-                  disabled={responding}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 sm:py-3 text-xs sm:text-sm"
-                >
-                  {responding ? (
-                    <>
-                      <motion.div
-                        className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full mr-2"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                      />
-                      Accepting...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      🚑 ACCEPT & DISPATCH AMBULANCE
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={() => handleResponse("deny")}
-                  disabled={responding}
-                  variant="destructive"
-                  className="flex-1 font-semibold py-2 sm:py-3 text-xs sm:text-sm"
-                >
-                  {responding ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      <XCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      DECLINE
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-            {selectedAlert.status === "accepted" && (
-              <div className="bg-green-50 dark:bg-green-900/20 p-3 sm:p-4 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                  <span className="font-semibold text-green-800 dark:text-green-200 text-xs sm:text-sm">
-                    Emergency Accepted - Ambulance Dispatched
-                  </span>
-                </div>
-                {selectedAlert.acceptedBy && (
-                  <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 mt-2">
-                    Handled by: {selectedAlert.acceptedBy.name}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  </div>
-)
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }

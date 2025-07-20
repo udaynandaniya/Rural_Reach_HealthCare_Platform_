@@ -613,7 +613,7 @@ const EmergencyAlertSchema: Schema = new Schema(
     priority: { type: String, enum: ["critical", "high", "medium", "low"], default: "critical" },
     status: {
       type: String,
-      enum: ["pending", "accepted", "declined", "cancelled", "no_response_all_contacted"],
+      enum: ["pending", "accepted", "declined", "cancelled", "no_response_all_contacted","completed"],
       default: "pending",
     },
     isSentTo: [
@@ -637,6 +637,7 @@ const EmergencyAlertSchema: Schema = new Schema(
       distance: { type: Number }, // Store distance from user to accepting hospital
     },
     respondedAt: { type: Date }, // When the alert was accepted/declined
+    completedAt: { type: Date },
   },
   { timestamps: true },
 )

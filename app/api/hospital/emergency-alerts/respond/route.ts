@@ -668,15 +668,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Hospital not in alert's isSentTo list." }, { status: 404 })
     }
 
-    if (action === "accept") {
-      alert.status = "accepted"
-      alert.acceptedBy = {
-        _id: hospital._id,
-        name: hospital.name,
-        phone: hospital.phone, // persist phone to DB
-      }
-      alert.isSentTo[hospitalAlertIndex].status = "accepted"
-    } else if (action === "deny") {
+  if (action === "accept") {
+  if (alert.status !== "pending") {
+    return NextResponse.json({ success: false, message: "Alert is no longer active." }, { status: 409 })
+  }
+
+  alert.status = "accepted"
+  alert.acceptedBy = {
+    _id: hospital._id,
+    name: hospital.name,
+    phone: hospital.phone,
+  }
+  alert.respondedAt = new Date()
+  alert.isSentTo[hospitalAlertIndex].status = "accepted"
+}
+else if (action === "deny") {
       alert.isSentTo[hospitalAlertIndex].status = "declined"
       // If a hospital declines, we can remove it from the list of alerts for this hospital
       // This is handled on the client side by filtering the alerts array after a successful deny.
