@@ -1043,12 +1043,7 @@ export default function HospitalSignupPage() {
                   onCheckedChange={(checked) => setFormData({ ...formData, terms: !!checked })}
                   required
                 />
-                <Label htmlFor="terms">
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-purple-600 hover:underline">
-                    Terms and Conditions
-                  </Link>
-                </Label>
+               
               </div>
 
               <div className="flex justify-between">

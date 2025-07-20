@@ -3068,7 +3068,7 @@ export default function HospitalDashboard() {
                                           : "text-gray-800 dark:text-gray-200"
                                     }`}
                                   >
-                                    🚨 EMERGENCY ALERT
+                                    🚨 EMERGENCY ALERT 
                                   </h3>
                                   <Badge className={getPriorityColor(alert.priority)}>
                                     {alert.priority.toUpperCase()}
@@ -3112,7 +3112,7 @@ export default function HospitalDashboard() {
                                       {alert.distance && (
                                         <div className="flex items-center space-x-2">
                                           <Navigation className="w-4 h-4 text-green-500" />
-                                          <span className="font-semibold text-green-600">{alert.distance}km away</span>
+                                          <span className="font-semibold text-green-600">{alert.distance}km away ..</span>
                                           {alert.proximityMethod && (
                                             <span className="text-xs text-gray-500">({alert.proximityMethod})</span>
                                           )}

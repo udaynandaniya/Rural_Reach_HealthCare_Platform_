@@ -2899,7 +2899,7 @@ export default function UserDashboard() {
           </ul>
           <p className="font-semibold text-sm sm:text-base">This is only for your safety — your privacy is 100% protected.</p>
           <p className="text-blue-600 dark:text-blue-400 font-medium text-sm sm:text-base">
-            👉 Please tap "Allow" when your browser asks for permission.
+            👉 Please tap "Allow" when your browser asks for permission.<br/><br/> If still latitude and longitude not shows than start location from you device please this step is for you safety purpose
           </p>
         </div>
         <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 mt-4">
@@ -3932,17 +3932,21 @@ export default function UserDashboard() {
                                 <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
                                 <span>{formatTimeAgo(alert.createdAt)}</span>
                               </div>
-                              {alert.status !== "pending" && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleDeleteAlert(alert._id)}
-                                  className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs sm:text-sm"
-                                >
-                                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                  Delete
-                                </Button>
-                              )}
+                              {(() => {
+  const hoursSinceCreated = (Date.now() - new Date(alert.createdAt).getTime()) / (1000 * 60 * 60);
+  return hoursSinceCreated >= 5 ? (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => handleDeleteAlert(alert._id)}
+      className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs sm:text-sm"
+    >
+      <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+      Delete
+    </Button>
+  ) : null;
+})()}
+
                             </div>
                           </div>
                         </div>

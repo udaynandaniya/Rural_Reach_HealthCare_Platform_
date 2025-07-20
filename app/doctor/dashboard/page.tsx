@@ -1533,7 +1533,7 @@ if (!user) return <p>Unauthorized</p>
                     <div className="text-center py-8 sm:py-12">
                       <Stethoscope className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-base sm:text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                        No posts yet
+                        No post yet
                       </h3>
                       <p className="text-sm sm:text-base text-gray-500">
                         Posts from other hospitals and doctors will appear here
