@@ -2744,7 +2744,7 @@ export default function LandingPage() {
               Our support team is available 24/7 to assist you with any healthcare needs or platform questions.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
-              <Button
+              {/* <Button
                 onClick={() => router.push("/auth/register")}
                 className="text-sm sm:text-base px-6 py-3 w-full sm:w-auto"
               >
@@ -2756,7 +2756,7 @@ export default function LandingPage() {
                 className="text-sm sm:text-base px-6 py-3 w-full sm:w-auto"
               >
                 Contact Us
-              </Button>
+              </Button> */}
             </div>
           </div>
         </motion.section>
