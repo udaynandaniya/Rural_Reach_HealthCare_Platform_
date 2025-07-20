@@ -2320,7 +2320,7 @@ export default function HospitalDashboard() {
       })
 
       if (response.ok) {
-        toast.success("✅ Post created successfully! Awaiting admin approval.")
+        toast.success("✅ Post created successfully!.")
         setNewPost({
           title: "",
           content: "",
@@ -2954,7 +2954,7 @@ export default function HospitalDashboard() {
         </motion.div>
 
         {/* Main Content Tabs */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
@@ -2966,8 +2966,43 @@ export default function HospitalDashboard() {
               <TabsTrigger value="own-posts">Own Posts</TabsTrigger>
               <TabsTrigger value="all-posts">All Posts</TabsTrigger>
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
-            </TabsList>
+            </TabsList> */}
 
+
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6, delay: 0.3 }}
+>
+  <Tabs
+    value={activeTab}
+    onValueChange={setActiveTab}
+    className="space-y-4 sm:space-y-6 px-2 sm:px-4"
+  >
+    {/* Tabs List: Mobile scrollable + responsive grid on larger screens */}
+    <div className="overflow-x-auto">
+      <TabsList
+        className="flex sm:grid sm:grid-cols-3 md:grid-cols-5 gap-2 w-max sm:w-full text-xs sm:text-sm min-w-[480px] sm:min-w-0"
+      >
+        {isHandleEmergency && (
+          <TabsTrigger value="emergencies" className="whitespace-nowrap">
+            Emergency Alerts
+          </TabsTrigger>
+        )}
+        <TabsTrigger value="create" className="whitespace-nowrap">
+          Create Post
+        </TabsTrigger>
+        <TabsTrigger value="own-posts" className="whitespace-nowrap">
+          Own Posts
+        </TabsTrigger>
+        <TabsTrigger value="all-posts" className="whitespace-nowrap">
+          All Posts
+        </TabsTrigger>
+        <TabsTrigger value="announcements" className="whitespace-nowrap">
+          Announcements
+        </TabsTrigger>
+      </TabsList>
+    </div>
             {/* Emergency Alerts Tab - Only show if hospital handles emergencies */}
             {isHandleEmergency && (
               <TabsContent value="emergencies" className="space-y-6">
