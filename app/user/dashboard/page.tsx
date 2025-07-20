@@ -2252,36 +2252,92 @@ export default function UserDashboard() {
   }
 
   // Function to request location and handle prompt
+  // const handleLocationRequest = async () => {
+  //   return new Promise<boolean>((resolve) => {
+  //     if (navigator.geolocation) {
+  //       navigator.geolocation.getCurrentPosition(
+  //         async (position) => {
+  //           const newLocation = {
+  //             lat: position.coords.latitude,
+  //             lng: position.coords.longitude,
+  //           }
+  //           setLocation(newLocation)
+  //           await updateLocationInDB(newLocation)
+  //           resolve(true) // Location granted and saved
+  //         },
+  //         (error) => {
+  //           if (error.code === error.PERMISSION_DENIED) {
+  //             setShowLocationPrompt(true) // Show the custom prompt
+  //             resolve(false) // Location denied, prompt shown
+  //           } else {
+  //             toast.error("Location access denied or error. Emergency alerts will use your registered address.")
+  //             resolve(false) // Other error, proceed without live location
+  //           }
+  //         },
+  //         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }, // Request fresh location
+  //       )
+  //     } else {
+  //       toast.error("Geolocation not supported by this browser. Emergency alerts will use your registered address.")
+  //       resolve(false) // Not supported
+  //     }
+  //   })
+  // }
+
+
   const handleLocationRequest = async () => {
-    return new Promise<boolean>((resolve) => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const newLocation = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            }
-            setLocation(newLocation)
-            await updateLocationInDB(newLocation)
-            resolve(true) // Location granted and saved
-          },
-          (error) => {
-            if (error.code === error.PERMISSION_DENIED) {
-              setShowLocationPrompt(true) // Show the custom prompt
-              resolve(false) // Location denied, prompt shown
-            } else {
-              toast.error("Location access denied or error. Emergency alerts will use your registered address.")
-              resolve(false) // Other error, proceed without live location
-            }
-          },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }, // Request fresh location
-        )
-      } else {
-        toast.error("Geolocation not supported by this browser. Emergency alerts will use your registered address.")
-        resolve(false) // Not supported
+  // Check permission before triggering getCurrentPosition
+  if (navigator.permissions) {
+    try {
+      const status = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+
+      if (status.state === "granted") {
+        // Permission already granted – fetch location silently
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setLocation(newLocation);
+          await updateLocationInDB(newLocation);
+        });
+        return true;
       }
-    })
+
+      if (status.state === "denied") {
+        // Permission permanently denied – do not show prompt
+        toast.error("Location access was denied. We'll use your registered address.");
+        return false;
+      }
+
+      if (status.state === "prompt") {
+        // First-time or reset – show custom prompt
+        setShowLocationPrompt(true);
+        return false;
+      }
+    } catch (err) {
+      console.error("Permission check error:", err);
+      toast.error("Could not check location permissions.");
+      return false;
+    }
+  } else {
+    // Permissions API not supported — fallback
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const newLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        setLocation(newLocation);
+        await updateLocationInDB(newLocation);
+      },
+      (error) => {
+        toast.error("Location access denied or error.");
+      }
+    );
+    return false;
   }
+};
+
 
   useEffect(() => {
     const initDashboard = async () => {
