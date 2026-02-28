@@ -1,41 +1,136 @@
-# Rural_Reach_HealthCare_Platform_
+# 🌾 Rural Reach Healthcare Platform
+### 🧠 Mental & Physical Emergency Support System for Rural Communities
+
+<p align="center">
+  <img src="public/placeholder-logo.svg" width="130" alt="Rural Reach Logo"/>
+</p>
+
+<p align="center">
+A full-stack healthcare platform that connects rural patients, hospitals, and doctors through emergency alerts, mental health assessments, and community health resources.
+</p>
 
 <p align="center">
 
-### 🧰 Tech Stack & Tools
+## 🧰 Tech Stack & Tools
 
 ![Next.js](https://img.shields.io/badge/Next.js-000000?logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-Auth-orange)
+![JWT](https://img.shields.io/badge/JWT-Authentication-orange)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?logo=tailwindcss&logoColor=white)
 ![Radix UI](https://img.shields.io/badge/Radix_UI-161618?logo=radixui&logoColor=white)
 ![React Hook Form](https://img.shields.io/badge/React_Hook_Form-EC5990?logo=reacthookform&logoColor=white)
 ![Nodemailer](https://img.shields.io/badge/Nodemailer-Email-green)
 ![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black?logo=vercel)
-![Context API](https://img.shields.io/badge/State-React_Context-blue)
 
 </p>
 
-## 📝 Description
+---
 
-Rural Reach Healthcare Platform is a modern, high-performance web application dedicated to bridging the healthcare gap for underserved rural communities. Developed with Next.js, React, and TypeScript, the platform ensures a seamless and responsive user experience across all devices. It features a secure authentication system and a robust API backbone to provide remote populations with reliable access to medical services, health management tools, and professional consultation, making quality healthcare more accessible regardless of geographic location.
+## 🌐 Live Demo
 
-## ✨ Features
+🔗 **Website:** https://rural-reach-one.vercel.app/  
+🎥 **Demo Video & Screen Recordings:**  
+https://drive.google.com/drive/folders/13NxStr-AydBhhMLudmS8H92j5eg3wjOQ
 
-- 🌐 Api
-- 🔐 Auth
-- 🕸️ Web
+---
 
+## ❗ Problem Statement
 
-## 🛠️ Tech Stack
+Healthcare access in rural and isolated communities is extremely limited.  
+People silently suffer due to:
 
-- next.js Next.js
-- ⚛️ React
-- 📜 TypeScript
+- Mental health stigma (anxiety, depression, insomnia)
+- Undiagnosed early symptoms
+- Physical health neglect (chronic pain, fatigue)
+- Lack of nearby medical facilities
+- No private consultation method
+- No emergency communication channel
 
+There is also **no structured digital connection between patients and local hospitals**.
+
+---
+
+## 💡 Solution
+
+Rural Reach is a **4-role integrated healthcare platform** that provides:
+
+- Private self-assessment tools
+- Emergency alert system
+- Hospital communication
+- Community health education
+- Mental health awareness
+
+The platform digitizes primary healthcare access for rural populations using a simple web interface that works even on low-end devices.
+
+---
+
+## 👥 User Roles & Capabilities
+
+| Role | Features |
+|------|------|
+User | Mood tracking, health tips, emergency SOS, assessments
+Hospital | Accept emergencies, availability toggle, post tips
+Doctor | Publish medical explainers & prevention guides
+Admin | Verify providers, monitor platform, manage users
+
+---
+
+## ✨ Core Features
+
+### 🚨 Emergency Alert System
+- One-tap SOS button
+- Sends user location to nearby hospitals
+- Real-time hospital response
+- First hospital acceptance locks the case
+- 3-minute no-response notification
+- Emergency history tracking
+- Manual address fallback if GPS denied
+
+### 🧠 Mental Health Support
+- PHQ-9 Depression Assessment
+- GAD-7 Anxiety Assessment
+- Mood tracking with records
+- Early symptom awareness
+
+### 🏥 Hospital Dashboard
+- Emergency case notifications
+- Accept / Reject emergency requests
+- Availability toggle
+- Nearby-radius filtering (5–10 km)
+- Verified medical tips posting
+
+### 👨‍⚕️ Doctor Portal
+- Doctor verification
+- Educational health posts
+- Early detection symptom guides
+
+### 🧑 Patient Portal
+- Secure signup/login
+- View nearby hospitals
+- Read health tips
+- Like and interact with posts
+
+### 🔐 Security & Authentication
+- JWT based authentication
+- OTP verification via email
+- Password reset
+- Role-based access control
+
+---
+
+## 🔄 Emergency Alert Flow
+
+1. User presses **SOS**
+2. GPS location requested
+3. Alert stored in database
+4. Nearby hospitals notified
+5. Hospitals filtered by availability
+6. First hospital accepting gets assigned
+7. Others blocked from responding
+8. If no response in 3 minutes → user notified
 
 ## 📦 Key Dependencies
 
